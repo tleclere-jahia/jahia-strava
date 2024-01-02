@@ -13,3 +13,7 @@ target
 
 # Jahia DX Studio
 repository.xml.generated
+
+# NodeJS
+node_modules
+*.log

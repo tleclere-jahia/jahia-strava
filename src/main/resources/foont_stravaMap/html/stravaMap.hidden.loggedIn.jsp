@@ -8,7 +8,6 @@
 <%@ taglib prefix="query" uri="http://www.jahia.org/tags/queryLib" %>
 <%@ taglib prefix="utility" uri="http://www.jahia.org/tags/utilityLib" %>
 <%@ taglib prefix="s" uri="http://www.jahia.org/tags/search" %>
-<%@ taglib prefix="json" uri="http://www.atg.com/taglibs/json" %>
 <%--@elvariable id="currentNode" type="org.jahia.services.content.JCRNodeWrapper"--%>
 <%--@elvariable id="out" type="java.io.PrintWriter"--%>
 <%--@elvariable id="script" type="org.jahia.services.render.scripting.Script"--%>
@@ -17,21 +16,6 @@
 <%--@elvariable id="renderContext" type="org.jahia.services.render.RenderContext"--%>
 <%--@elvariable id="currentResource" type="org.jahia.services.render.Resource"--%>
 <%--@elvariable id="url" type="org.jahia.services.render.URLGenerator"--%>
-<json:array>
-    <json:object>
-        <json:property name="name" value="apiKey"/>
-        <json:property name="mandatory" value="${true}"/>
-    </json:object>
-    <json:object>
-        <json:property name="name" value="apiSecret"/>
-        <json:property name="mandatory" value="${true}"/>
-    </json:object>
-    <json:object>
-        <json:property name="name" value="scope"/>
-        <json:property name="mandatory" value="${false}"/>
-    </json:object>
-    <json:object>
-        <json:property name="name" value="callbackUrl"/>
-        <json:property name="mandatory" value="${false}"/>
-    </json:object>
-</json:array>
+<%--@elvariable id="currentUser" type="org.jahia.services.usermanager.JahiaUser"--%>
+<jcr:node var="userNode" path="${currentUser.localPath}"/>
+<pre>User: ${userNode.path}</pre>

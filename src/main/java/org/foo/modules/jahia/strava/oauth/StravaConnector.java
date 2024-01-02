@@ -17,14 +17,9 @@ import java.util.List;
 @Component(service = {OAuthConnectorService.class, ConnectorService.class}, property = {JahiaAuthConstants.CONNECTOR_SERVICE_NAME + "=" + StravaConnector.KEY}, immediate = true)
 public class StravaConnector implements OAuthConnectorService {
     public static final String KEY = "StravaApi20";
-    private static final String PROTECTED_RESOURCE_URL = "https://www.strava.com/api/v3/athlete";
 
+    @Reference
     private JahiaOAuthService jahiaOAuthService;
-
-    @Reference(service = JahiaOAuthService.class)
-    private void setJahiaOAuthService(JahiaOAuthService jahiaOAuthService) {
-        this.jahiaOAuthService = jahiaOAuthService;
-    }
 
     @Activate
     private void onActivate() {
@@ -38,7 +33,7 @@ public class StravaConnector implements OAuthConnectorService {
 
     @Override
     public String getProtectedResourceUrl(ConnectorConfig config) {
-        return PROTECTED_RESOURCE_URL;
+        return StravaApi20.API + "/api/v3/athlete";
     }
 
     @Override

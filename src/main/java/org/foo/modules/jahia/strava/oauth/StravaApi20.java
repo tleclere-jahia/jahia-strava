@@ -5,6 +5,8 @@ import com.github.scribejava.core.oauth2.clientauthentication.ClientAuthenticati
 import com.github.scribejava.core.oauth2.clientauthentication.RequestBodyAuthenticationScheme;
 
 public final class StravaApi20 extends DefaultApi20 {
+    public static final String API = "https://www.strava.com";
+
     private StravaApi20() {
     }
 
@@ -18,12 +20,12 @@ public final class StravaApi20 extends DefaultApi20 {
 
     @Override
     public String getAccessTokenEndpoint() {
-        return "https://www.strava.com/oauth/token";
+        return API + "/oauth/token";
     }
 
     @Override
     protected String getAuthorizationBaseUrl() {
-        return "https://www.strava.com/oauth/authorize";
+        return API + "/oauth/authorize";
     }
 
     @Override

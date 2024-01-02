@@ -21,15 +21,9 @@
 <c:if test="${empty i18nJSFile}">
     <template:addResources type="javascript" resources="i18n/jahia-strava-i18n.js"/>
 </c:if>
-<template:addResources type="javascript" resources="oauth-connector-controller.js"/>
+<template:addResources type="javascript" resources="strava-oauth-connector-controller.js"/>
 
-<c:set var="connectorVar" value="connector${fn:replace(currentNode.identifier, '-', '')}" scope="request"/>
-<c:set var="connectorFormVar" value="connectorForm${fn:replace(currentNode.identifier, '-', '')}" scope="request"/>
-
-<template:include view="hidden.jsonProperties" templateType="json" var="properties"/>
-
-<md-card ng-controller="OAuthConnectorController as ${connectorVar}" class="ng-cloak"
-         ng-init="${connectorVar}.init('StravaApi20', <c:out value="${properties})"/>">
+<md-card ng-controller="StravaOAuthConnectorController as stravaConnector" class="ng-cloak">
     <div layout="row">
         <md-card-title flex>
             <md-card-title-text>
@@ -37,21 +31,21 @@
             </md-card-title-text>
         </md-card-title>
         <div flex layout="row" layout-align="end center">
-            <md-button class="md-icon-button" ng-click="${connectorVar}.toggleCard()">
+            <md-button class="md-icon-button" ng-click="stravaConnector.toggleCard()">
                 <md-tooltip md-direction="top">
                     <span message-key="tooltip.toggleSettings"></span>
                 </md-tooltip>
-                <md-icon ng-show="!${connectorVar}.expandedCard">keyboard_arrow_down</md-icon>
-                <md-icon ng-show="${connectorVar}.expandedCard">keyboard_arrow_up</md-icon>
+                <md-icon ng-show="!stravaConnector.expandedCard">keyboard_arrow_down</md-icon>
+                <md-icon ng-show="stravaConnector.expandedCard">keyboard_arrow_up</md-icon>
             </md-button>
         </div>
     </div>
 
-    <md-card-content layout="column" ng-show="${connectorVar}.expandedCard">
-        <form name="${connectorFormVar}">
+    <md-card-content layout="column" ng-show="stravaConnector.expandedCard">
+        <form name="stravaConnectorForm">
 
             <div layout="row">
-                <md-switch ng-model="${connectorVar}.enabled">
+                <md-switch ng-model="stravaConnector.enabled">
                     <span message-key="label.activate"></span>
                 </md-switch>
             </div>
@@ -59,8 +53,8 @@
             <div layout="row">
                 <md-input-container flex>
                     <label message-key="label.apiKey"></label>
-                    <input type="text" ng-model="${connectorVar}.apiKey" name="apiKey" required/>
-                    <div ng-messages="${connectorFormVar}.apiKey.$error" role="alert">
+                    <input type="text" ng-model="stravaConnector.apiKey" name="apiKey" required/>
+                    <div ng-messages="stravaConnectorForm.apiKey.$error" role="alert">
                         <div ng-message="required" message-key="error.apiKey.required"></div>
                     </div>
                 </md-input-container>
@@ -69,8 +63,8 @@
 
                 <md-input-container flex>
                     <label message-key="label.apiSecret"></label>
-                    <input type="text" ng-model="${connectorVar}.apiSecret" name="apiSecret" required/>
-                    <div ng-messages="${connectorFormVar}.apiSecret.$error" role="alert">
+                    <input type="text" ng-model="stravaConnector.apiSecret" name="apiSecret" required/>
+                    <div ng-messages="stravaConnectorForm.apiSecret.$error" role="alert">
                         <div ng-message="required" message-key="error.apiSecret.required"></div>
                     </div>
                 </md-input-container>
@@ -79,10 +73,10 @@
             <div layout="row">
                 <md-input-container flex>
                     <label message-key="label.scope"></label>
-                    <input type="text" ng-model="${connectorVar}.scope" name="scope"/>
-                    <div class="hint" ng-show="!${connectorFormVar}.scope.$invalid"
+                    <input type="text" ng-model="stravaConnector.scope" name="scope"/>
+                    <div class="hint" ng-show="!stravaConnectorForm.scope.$invalid"
                          message-key="hint.scope"></div>
-                    <div ng-messages="${connectorFormVar}.scope.$error" role="alert">
+                    <div ng-messages="stravaConnectorForm.scope.$error" role="alert">
                         <div ng-message="required" message-key="error.scope.required"></div>
                     </div>
                 </md-input-container>
@@ -91,11 +85,11 @@
             <div layout="row">
                 <md-input-container class="md-block" flex>
                     <label message-key="label.callbackURL"></label>
-                    <input type="url" ng-model="${connectorVar}.callbackUrl" name="callbackUrl"/>
-                    <div class="hint" ng-show="${connectorFormVar}.callbackUrl.$valid"
+                    <input type="url" ng-model="stravaConnector.callbackUrl" name="callbackUrl"/>
+                    <div class="hint" ng-show="stravaConnectorForm.callbackUrl.$valid"
                          message-key="foont_stravaOAuthView.hint.callbackURL"></div>
-                    <div ng-messages="${connectorFormVar}.callbackUrl.$error"
-                         ng-show="${connectorFormVar}.callbackUrl.$invalid" role="alert">
+                    <div ng-messages="stravaConnectorForm.callbackUrl.$error"
+                         ng-show="stravaConnectorForm.callbackUrl.$invalid" role="alert">
                         <div ng-message="url" message-key="error.notAValidURL"></div>
                     </div>
                 </md-input-container>
@@ -104,9 +98,9 @@
 
         <md-card-actions layout="row" layout-align="end center">
             <md-button class="md-accent" message-key="label.mappers"
-                       ng-click="${connectorVar}.goToMappers()" ng-show="${connectorVar}.connectorHasSettings">
+                       ng-click="stravaConnector.goToMappers()" ng-show="stravaConnector.connectorHasSettings">
             </md-button>
-            <md-button class="md-accent" message-key="label.save" ng-click="${connectorVar}.saveSettings()"></md-button>
+            <md-button class="md-accent" message-key="label.save" ng-click="stravaConnector.saveSettings()"></md-button>
         </md-card-actions>
 
     </md-card-content>

@@ -4,3 +4,9 @@
 
 [foont:stravaOAuthView] > jnt:content, jmix:authConnectorSettingView
 
+[foont:stravaActivity] > jnt:content, mix:title, jmix:autoPublish, jmix:structuredContent
+ - date (date) mandatory
+ - jsonValue (string) hidden protected mandatory
+
+[foont:stravaMap] > jnt:content, mix:title, jmix:structuredContent
+

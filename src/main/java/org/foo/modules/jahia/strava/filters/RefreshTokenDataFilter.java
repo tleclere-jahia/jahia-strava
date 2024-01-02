@@ -18,18 +18,10 @@ import java.util.Map;
 
 @Component(service = RenderFilter.class)
 public class RefreshTokenDataFilter extends AbstractFilter {
+    @Reference
     private JahiaOAuthService jahiaOAuthService;
+    @Reference
     private SettingsService settingsService;
-
-    @Reference
-    private void setJahiaOAuthService(JahiaOAuthService jahiaOAuthService) {
-        this.jahiaOAuthService = jahiaOAuthService;
-    }
-
-    @Reference
-    private void setSettingsService(SettingsService settingsService) {
-        this.settingsService = settingsService;
-    }
 
     public RefreshTokenDataFilter() {
         setApplyOnConfigurations(Resource.CONFIGURATION_PAGE);

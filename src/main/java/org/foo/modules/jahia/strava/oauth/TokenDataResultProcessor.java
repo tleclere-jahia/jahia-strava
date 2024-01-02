@@ -1,7 +1,11 @@
 package org.foo.modules.jahia.strava.oauth;
 
 import org.foo.modules.jahia.strava.utils.RequestUtils;
-import org.jahia.modules.jahiaauth.service.*;
+import org.jahia.modules.jahiaauth.service.ConnectorConfig;
+import org.jahia.modules.jahiaauth.service.ConnectorResultProcessor;
+import org.jahia.modules.jahiaauth.service.JahiaAuthMapperService;
+import org.jahia.modules.jahiaauth.service.MappedProperty;
+import org.jahia.modules.jahiaauth.service.MappedPropertyInfo;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -12,12 +16,8 @@ import java.util.Map;
 
 @Component(service = ConnectorResultProcessor.class, immediate = true)
 public class TokenDataResultProcessor implements ConnectorResultProcessor {
-    private JahiaAuthMapperService jahiaAuthMapperService;
-
     @Reference
-    private void setJahiaAuthMapperService(JahiaAuthMapperService jahiaAuthMapperService) {
-        this.jahiaAuthMapperService = jahiaAuthMapperService;
-    }
+    private JahiaAuthMapperService jahiaAuthMapperService;
 
     @Override
     public void execute(ConnectorConfig connectorConfig, Map<String, Object> results) {
