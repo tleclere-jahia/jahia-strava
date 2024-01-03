@@ -6,6 +6,9 @@ import com.github.scribejava.core.oauth2.clientauthentication.RequestBodyAuthent
 
 public final class StravaApi20 extends DefaultApi20 {
     public static final String API = "https://www.strava.com";
+    public static final String SSO_LOGIN_ID = "username";
+    public static final String GROUPNAME = "strava-users";
+    public static final String SITEKEY = null;
 
     private StravaApi20() {
     }

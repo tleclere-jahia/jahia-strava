@@ -39,7 +39,7 @@ public class StravaConnector implements OAuthConnectorService {
     @Override
     public List<ConnectorPropertyInfo> getAvailableProperties() {
         return Arrays.asList(
-                new ConnectorPropertyInfo("username", "string"),
+                new ConnectorPropertyInfo(StravaApi20.SSO_LOGIN_ID, "string"),
                 new ConnectorPropertyInfo("firstname", "string"),
                 new ConnectorPropertyInfo("lastname", "string")
         );

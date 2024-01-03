@@ -35,7 +35,7 @@ public class RefreshTokenDataFilter extends AbstractFilter {
             return null;
         }
         Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
-        if (tokenData != null && (((Long) tokenData.get(RequestUtils.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000L)) <= RequestUtils.TOKEN_MIN_LIFE_IN_SECONDS)) {
+        if (tokenData != null && (((Integer) tokenData.get(RequestUtils.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000)) <= RequestUtils.TOKEN_MIN_LIFE_IN_SECONDS)) {
             renderContext.getRequest().getSession(false).setAttribute(JahiaOAuthConstants.TOKEN_DATA,
                     RequestUtils.addExpireAtInTokenData(jahiaOAuthService.refreshAccessToken(connectorConfig, (String) tokenData.get(JahiaOAuthConstants.REFRESH_TOKEN))));
         }

@@ -18,4 +18,3 @@
 <%--@elvariable id="url" type="org.jahia.services.render.URLGenerator"--%>
 <%--@elvariable id="currentUser" type="org.jahia.services.usermanager.JahiaUser"--%>
 <jcr:node var="userNode" path="${currentUser.localPath}"/>
-<pre>User: ${userNode.path}</pre>
