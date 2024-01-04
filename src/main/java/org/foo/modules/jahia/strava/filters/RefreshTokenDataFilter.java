@@ -1,7 +1,7 @@
 package org.foo.modules.jahia.strava.filters;
 
+import org.foo.modules.jahia.strava.client.StravaClient;
 import org.foo.modules.jahia.strava.oauth.StravaConnector;
-import org.foo.modules.jahia.strava.utils.RequestUtils;
 import org.jahia.modules.jahiaauth.service.ConnectorConfig;
 import org.jahia.modules.jahiaauth.service.SettingsService;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
@@ -22,6 +22,8 @@ public class RefreshTokenDataFilter extends AbstractFilter {
     private JahiaOAuthService jahiaOAuthService;
     @Reference
     private SettingsService settingsService;
+    @Reference
+    private StravaClient stravaClient;
 
     public RefreshTokenDataFilter() {
         setApplyOnConfigurations(Resource.CONFIGURATION_PAGE);
@@ -35,9 +37,9 @@ public class RefreshTokenDataFilter extends AbstractFilter {
             return null;
         }
         Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
-        if (tokenData != null && (((Integer) tokenData.get(RequestUtils.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000)) <= RequestUtils.TOKEN_MIN_LIFE_IN_SECONDS)) {
+        if (tokenData != null && (((Integer) tokenData.get(StravaClient.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000)) <= StravaClient.TOKEN_MIN_LIFE_IN_SECONDS)) {
             renderContext.getRequest().getSession(false).setAttribute(JahiaOAuthConstants.TOKEN_DATA,
-                    RequestUtils.addExpireAtInTokenData(jahiaOAuthService.refreshAccessToken(connectorConfig, (String) tokenData.get(JahiaOAuthConstants.REFRESH_TOKEN))));
+                    stravaClient.addExpireAtInTokenData(jahiaOAuthService.refreshAccessToken(connectorConfig, (String) tokenData.get(JahiaOAuthConstants.REFRESH_TOKEN))));
         }
         return null;
     }

@@ -2,7 +2,6 @@ package org.foo.modules.jahia.strava.oauth;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpHeaders;
-import org.foo.modules.jahia.strava.utils.RequestUtils;
 import org.jahia.bin.Action;
 import org.jahia.bin.ActionResult;
 import org.jahia.bin.Render;
@@ -13,7 +12,6 @@ import org.jahia.services.content.JCRSessionWrapper;
 import org.jahia.services.render.RenderContext;
 import org.jahia.services.render.Resource;
 import org.jahia.services.render.URLResolver;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -25,16 +23,14 @@ import java.util.Map;
 
 @Component(service = Action.class)
 public class StravaConnectAction extends Action {
-    private static final String NAME = "connectToStrava";
-
+    public static final String SESSION_REQUEST_URI = "my.request_uri";
     @Reference
     private JahiaOAuthService jahiaOAuthService;
     @Reference
     private SettingsService settingsService;
 
-    @Activate
-    public void onActivate() {
-        setName(NAME);
+    public StravaConnectAction() {
+        setName("connectToStrava");
         setRequireAuthenticatedUser(false);
         setRequiredMethods(Render.METHOD_GET);
     }
@@ -47,7 +43,7 @@ public class StravaConnectAction extends Action {
 
         String referer = req.getHeader(HttpHeaders.REFERER);
         if (StringUtils.isNotBlank(referer)) {
-            req.getSession(false).setAttribute(RequestUtils.SESSION_REQUEST_URI, referer);
+            req.getSession(false).setAttribute(SESSION_REQUEST_URI, referer);
         }
 
         ConnectorConfig connectorConfig = settingsService.getConnectorConfig(renderContext.getSite().getSiteKey(), StravaConnector.KEY);

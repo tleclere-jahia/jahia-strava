@@ -1,7 +1,7 @@
 package org.foo.modules.jahia.strava.oauth;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.foo.modules.jahia.strava.utils.StravaClient;
+import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
@@ -89,7 +89,7 @@ public class StravaLoginListener implements EventHandler {
                 jcrUserNode.saveSession();
                 return true;
             }
-        } catch (JsonProcessingException | RepositoryException e) {
+        } catch (RepositoryException e) {
             logger.error("", e);
         }
         return false;

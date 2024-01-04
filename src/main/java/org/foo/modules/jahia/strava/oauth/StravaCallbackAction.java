@@ -1,7 +1,6 @@
 package org.foo.modules.jahia.strava.oauth;
 
 import org.apache.commons.lang.StringUtils;
-import org.foo.modules.jahia.strava.utils.RequestUtils;
 import org.jahia.bin.Action;
 import org.jahia.bin.ActionResult;
 import org.jahia.bin.Render;
@@ -25,15 +24,13 @@ import java.util.Map;
 public class StravaCallbackAction extends Action {
     private static final Logger logger = LoggerFactory.getLogger(StravaCallbackAction.class);
 
-    private static final String NAME = "stravaOAuthCallback";
-
     @Reference
     private JahiaOAuthService jahiaOAuthService;
     @Reference
     private SettingsService settingsService;
 
     public StravaCallbackAction() {
-        setName(NAME);
+        setName("stravaOAuthCallback");
         setRequireAuthenticatedUser(false);
         setRequiredMethods(Render.METHOD_GET);
     }
@@ -49,7 +46,7 @@ public class StravaCallbackAction extends Action {
             try {
                 String siteKey = renderContext.getSite().getSiteKey();
                 jahiaOAuthService.extractAccessTokenAndExecuteMappers(settingsService.getConnectorConfig(siteKey, StravaConnector.KEY), token, httpServletRequest.getRequestedSessionId());
-                String returnUrl = (String) httpServletRequest.getSession().getAttribute(RequestUtils.SESSION_REQUEST_URI);
+                String returnUrl = (String) httpServletRequest.getSession().getAttribute(StravaConnectAction.SESSION_REQUEST_URI);
                 if (returnUrl == null || StringUtils.endsWith(returnUrl, "/start")) {
                     returnUrl = renderContext.getSite().getHome().getUrl();
                 }

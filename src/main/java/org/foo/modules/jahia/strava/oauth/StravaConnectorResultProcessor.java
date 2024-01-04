@@ -1,8 +1,7 @@
 package org.foo.modules.jahia.strava.oauth;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import org.foo.modules.jahia.strava.utils.RequestUtils;
-import org.foo.modules.jahia.strava.utils.StravaClient;
+import org.apache.commons.lang.StringUtils;
+import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
 import org.jahia.api.usermanager.JahiaUserManagerService;
@@ -44,18 +43,16 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
             }
             try {
                 jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.EDIT_WORKSPACE, null, session -> {
-                    JCRUserNode user = jahiaUserManagerService.lookupUser(username, StravaApi20.SITEKEY, session);
-                    if (user == null) {
+                    JCRUserNode jcrUserNode = jahiaUserManagerService.lookupUser(username, StravaApi20.SITEKEY, session);
+                    if (jcrUserNode == null) {
                         logger.error("User {} not found", username);
                         return false;
                     }
                     try {
-                        if (results.containsKey(JahiaOAuthConstants.TOKEN_DATA)) {
-                            saveTokenData(user, (Map<String, Object>) results.get(JahiaOAuthConstants.TOKEN_DATA));
-                        }
-                        setMembership(user);
+                        saveTokenData(jcrUserNode, results);
+                        setMembership(jcrUserNode);
                         return true;
-                    } catch (JsonProcessingException | RepositoryException e) {
+                    } catch (RepositoryException e) {
                         logger.error("", e);
                         return false;
                     }
@@ -66,9 +63,14 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
         }
     }
 
-    private void saveTokenData(JCRUserNode jcrUserNode, Map<String, Object> tokenData) throws JsonProcessingException, RepositoryException {
-        jcrUserNode.setProperty(JahiaOAuthConstants.TOKEN_DATA, stravaClient.serializeTokenData(RequestUtils.addExpireAtInTokenData(tokenData)));
-        jcrUserNode.saveSession();
+    private void saveTokenData(JCRUserNode jcrUserNode, Map<String, Object> results) throws RepositoryException {
+        if (results.containsKey(JahiaOAuthConstants.TOKEN_DATA)) {
+            String tokenData = stravaClient.serializeTokenData((Map<String, Object>) results.get(JahiaOAuthConstants.TOKEN_DATA));
+            if (StringUtils.isNotBlank(tokenData)) {
+                jcrUserNode.setProperty(JahiaOAuthConstants.TOKEN_DATA, tokenData);
+                jcrUserNode.saveSession();
+            }
+        }
     }
 
     private void setMembership(JCRUserNode jcrUserNode) throws RepositoryException {
