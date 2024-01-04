@@ -37,7 +37,7 @@ public class RefreshTokenDataFilter extends AbstractFilter {
             return null;
         }
         Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
-        if (tokenData != null && (((Integer) tokenData.get(StravaClient.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000)) <= StravaClient.TOKEN_MIN_LIFE_IN_SECONDS)) {
+        if (tokenData != null && (((int) tokenData.get(StravaClient.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000)) <= StravaClient.TOKEN_MIN_LIFE_IN_SECONDS)) {
             renderContext.getRequest().getSession(false).setAttribute(JahiaOAuthConstants.TOKEN_DATA,
                     stravaClient.addExpireAtInTokenData(jahiaOAuthService.refreshAccessToken(connectorConfig, (String) tokenData.get(JahiaOAuthConstants.REFRESH_TOKEN))));
         }
