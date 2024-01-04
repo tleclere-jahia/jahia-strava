@@ -34,7 +34,9 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
 
     @Override
     public void execute(ConnectorConfig connectorConfig, Map<String, Object> results) {
-        logger.info("OAuth results: {}", results);
+        if(logger.isDebugEnabled()) {
+            logger.debug("OAuth results: {}", results);
+        }
         if (results.containsKey(StravaApi20.SSO_LOGIN_ID)) {
             String username = (String) results.get(StravaApi20.SSO_LOGIN_ID);
             if (username == null) {
