@@ -1,6 +1,7 @@
 package org.foo.modules.jahia.strava.client;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class Athlete {
     private long id;
@@ -17,4 +18,12 @@ public class Athlete {
     private boolean summit;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
+    private int follower_count;
+    private int friend_count;
+    private MeasurementPreference measurement_preference;
+    private int ftp;
+    private float weight;
+    private List<Club> clubs;
+    private List<Gear> bikes;
+    private List<Gear> shoes;
 }

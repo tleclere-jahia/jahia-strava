@@ -24,23 +24,81 @@
 
 <template:addCacheDependency flushOnPathMatchingRegexp="${userNode.path}/strava-activities/.*"/>
 <c:set var="activities" value="${jcr:getDescendantNodes(userNode, 'foont:stravaActivity')}"/>
+<c:set var="nbActivities" value="${functions:length(activities)}"/>
 <fmt:message key="stravaMap.user.activities">
-    <fmt:param value="${functions:length(activities)}"/>
+    <fmt:param value="${nbActivities}"/>
 </fmt:message>, <a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
         key="stravaMap.user.syncMe"/></a>
 
 <template:addResources key="leaflet">
-    <script src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>
-    <script type="text/javascript" src="https://rawgit.com/jieter/Leaflet.encoded/master/Polyline.encoded.js"></script>
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </template:addResources>
-<div id="map-${currentNode.identifier}" style="width: 100%; height: 380px"></div>
+<div id="map-${currentNode.identifier}" style="height:580px"></div>
 
 <template:addResources type="inlinejavascript">
     <script>
+        //decode an encoded string
+        const decode = encoded => {
+            //precision
+            const inv = 1.0 / 1e5;
+            const decoded = [];
+            const previous = [0, 0];
+            let i = 0;
+            //for each byte
+            while (i < encoded.length) {
+                //for each coord (lat, lon)
+                const ll = [0, 0]
+                for (let j = 0; j < 2; j++) {
+                    let shift = 0;
+                    let byte = 0x20;
+                    //keep decoding bytes until you have this coord
+                    while (byte >= 0x20) {
+                        byte = encoded.charCodeAt(i++) - 63;
+                        ll[j] |= (byte & 0x1f) << shift;
+                        shift += 5;
+                    }
+                    //add previous offset to get final value and remember for next one
+                    ll[j] = previous[j] + (ll[j] & 1 ? ~(ll[j] >> 1) : (ll[j] >> 1));
+                    previous[j] = ll[j];
+                }
+                //scale by precision and chop off long coords also flip the positions so
+                //its the far more standard lon,lat instead of lat,lon
+                decoded.push([ll[0] * inv, ll[1] * inv]);
+            }
+            //hand back the list of coordinates
+            return decoded;
+        };
+
+        const activities = [];
+        <c:forEach items="${activities}" var="activity">
+        activities.push(${activity.properties['jsonValue'].string});
+        </c:forEach>
+
         document.addEventListener("DOMContentLoaded", () => {
-            L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18})
-                .addTo(L.map('map-${currentNode.identifier}').setView([51.498265, -0.135642], 13));
+            const map = L.map('map-${currentNode.identifier}');
+            L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://mapbox.com">Mapbox</a>',
+                maxZoom: 18
+            }).addTo(map);
+
+            activities.forEach(activity => {
+                console.log(activity);
+                L.polyline(decode(activity['map']['polyline']), {
+                    color: '#9900CC',
+                    weight: 2,
+                    opacity: .7,
+                    lineJoin: 'round'
+                }).addTo(map);
+            });
+
+            navigator.geolocation.getCurrentPosition(location => {
+                const latlng = new L.LatLng(location.coords.latitude, location.coords.longitude);
+                map.setView(latlng, 13);
+                const marker = L.marker(latlng).addTo(map);
+            });
         });
     </script>
 </template:addResources>

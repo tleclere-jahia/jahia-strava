@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public class SegmentEffort {
     private long id;
-    private int activity_id;
+    private long activity_id;
     private int elapsed_time;
     private LocalDateTime start_date;
     private LocalDateTime start_date_local;

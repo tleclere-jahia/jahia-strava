@@ -6,4 +6,8 @@ public class Gear {
     private boolean primary;
     private String name;
     private float distance;
+    private String brand_name;
+    private String model_name;
+    private int frame_type;
+    private String description;
 }

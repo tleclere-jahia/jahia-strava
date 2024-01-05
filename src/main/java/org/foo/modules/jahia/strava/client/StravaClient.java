@@ -18,7 +18,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -38,14 +39,16 @@ public class StravaClient {
     public StravaClient() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.registerModule(new SimpleModule().addDeserializer(LatLng.class, new LatLngDeserializer(LatLng.class)));
+        objectMapper.registerModule(new SimpleModule()
+                        .addDeserializer(PolylineMap.class, new PolylineMapDeserializer(PolylineMap.class))
+                .addDeserializer(LatLng.class, new LatLngDeserializer(LatLng.class)));
         objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public static Map<String, Object> addExpireAtInTokenData(Map<String, Object> tokenData) {
-        tokenData.put(TOKEN_EXPIRES_AT, (System.currentTimeMillis() / 1000) + (Integer) tokenData.get(JahiaOAuthConstants.TOKEN_EXPIRES_IN));
+        tokenData.put(TOKEN_EXPIRES_AT, (System.currentTimeMillis() / 1000) + (int) tokenData.get(JahiaOAuthConstants.TOKEN_EXPIRES_IN));
         return tokenData;
     }
 
@@ -69,11 +72,13 @@ public class StravaClient {
         return null;
     }
 
-    private Optional<Activity> getActivity(String accessToken, long id) {
+    public Optional<Activity> getActivity(String accessToken, long id) {
         try {
             String response = httpClientService.executeGet(StravaApi20.API + "/api/v3/activities/" + id + "?include_all_efforts=true", Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
             if (response != null) {
-                return Optional.ofNullable(objectMapper.readValue(response, Activity.class));
+                Optional<Activity> activity = Optional.ofNullable(objectMapper.readValue(response, Activity.class));
+                activity.ifPresent(a -> a.setJson(response));
+                return activity;
             }
         } catch (JsonProcessingException e) {
             logger.error("", e);
@@ -81,9 +86,18 @@ public class StravaClient {
         return Optional.empty();
     }
 
-    private Optional<List<Activity>> getActivities(String accessToken, int page) {
+    public Optional<List<Activity>> getActivities(String accessToken, LocalDate startDate, int page) {
+        StringBuilder url = new StringBuilder(StravaApi20.API)
+                .append("/api/v3/athlete/activities")
+                .append("?");
+//                .append("per_page=2&");
+        if (startDate != null) {
+            url.append("after=").append(startDate.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
+                    .append("&");
+        }
+        url.append("page=").append(page);
         try {
-            String response = httpClientService.executeGet(StravaApi20.API + "/api/v3/athlete/activities?page=" + page, Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
+            String response = httpClientService.executeGet(url.toString(), Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
             if (response != null) {
                 return Optional.ofNullable(objectMapper.readValue(response, objectMapper.getTypeFactory().constructCollectionType(List.class, Activity.class)));
             }
@@ -91,16 +105,5 @@ public class StravaClient {
             logger.error("", e);
         }
         return Optional.empty();
-    }
-
-    public void syncMe(String accessToken) {
-        logger.info("Sync me");
-        List<Activity> activities = new ArrayList<>();
-        int page = 1;
-        getActivities(accessToken, page).ifPresent(data -> {
-            data.forEach(activity -> getActivity(accessToken, activity.getId()).ifPresent(activities::add));
-            // getMyActivities(accessToken, page + 1, activities);
-        });
-        logger.info("Activities: {}", activities);
     }
 }

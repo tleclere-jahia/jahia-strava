@@ -19,11 +19,12 @@ public class Activity {
     private float elev_high;
     private float elev_low;
     private SportType sport_type;
-    private LocalDateTime start_date;
+    @JsonProperty("start_date")
+    private LocalDateTime startDate;
     private LocalDateTime start_date_local;
     private String timezone;
-    public LatLng start_latlng;
-    public LatLng end_latlng;
+    private LatLng start_latlng;
+    private LatLng end_latlng;
     private int achievement_count;
     private int kudos_count;
     private int comment_count;
@@ -60,8 +61,25 @@ public class Activity {
     private List<Split> splits_standard;
     private List<Lap> laps;
     private List<SegmentEffort> best_efforts;
+    private String json;
+
+    public String getJson() {
+        return json;
+    }
+
+    public void setJson(String json) {
+        this.json = json;
+    }
 
     public long getId() {
         return id;
+    }
+
+    public PolylineMap getMap() {
+        return map;
+    }
+
+    public LocalDateTime getStartDate() {
+        return startDate;
     }
 }

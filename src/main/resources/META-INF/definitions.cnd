@@ -1,14 +1,15 @@
 <foont = 'http://www.foo.org/jahia/nt/1.0'>
+<jcr = 'http://www.jcp.org/jcr/1.0'>
 <jnt = 'http://www.jahia.org/jahia/nt/1.0'>
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
+<mix = 'http://www.jcp.org/jcr/mix/1.0'>
 
 [foont:stravaOAuthView] > jnt:content, jmix:authConnectorSettingView
 
 [foont:stravaActivity] > jnt:content, mix:title, jmix:autoPublish, jmix:structuredContent
- - id (string) mandatory
+ - jcr:title (string)
  - date (date) mandatory
  - jsonValue (string) hidden protected mandatory
- - polyline (string) hidden protected
 
 [foont:stravaMap] > jnt:content, mix:title, jmix:structuredContent
 

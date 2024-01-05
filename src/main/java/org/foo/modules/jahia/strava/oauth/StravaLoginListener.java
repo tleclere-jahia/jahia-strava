@@ -26,8 +26,9 @@ import java.util.Map;
 public class StravaLoginListener implements EventHandler {
     private static final Logger logger = LoggerFactory.getLogger(StravaLoginListener.class);
 
-    private static final String MY_STRAVA_PROFILE_ACTIVITES_FOLDER = "strava-activities";
-    private static final String STRAVA_ACTIVITY_DATE = "date";
+    public static final String MY_STRAVA_PROFILE_ACTIVITES_FOLDER = "strava-activities";
+    public static final String STRAVA_ACTIVITY_DATE = "date";
+    public static final String STRAVA_ACTIVITY_JSON = "jsonValue";
 
     @Reference
     private JCRTemplate jcrTemplate;

@@ -3,6 +3,8 @@ package org.foo.modules.jahia.strava.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import java.time.LocalDateTime;
+
 public class Segment {
     private long id;
     private String name;
@@ -24,4 +26,12 @@ public class Segment {
     private boolean isPrivate;
     private SegmentEffort athlete_pr_effort;
     private SegmentEffort athlete_segment_stats;
+    private LocalDateTime created_at;
+    private LocalDateTime updated_at;
+    private float total_elevation_gain;
+    private PolylineMap map;
+    private int effort_count;
+    private int athlete_count;
+    private boolean hazardous;
+    private int star_count;
 }

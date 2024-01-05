@@ -8,4 +8,12 @@ public class LatLng {
         this.lat = lat;
         this.lng = lng;
     }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public double getLng() {
+        return lng;
+    }
 }
