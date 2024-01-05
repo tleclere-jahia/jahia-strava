@@ -51,7 +51,15 @@ public class SyncBackgroundJob extends BackgroundJob {
         stravaClient.getActivities(accessToken, startDate, page).ifPresent(data -> {
             logger.info("{} activities found", data.size());
             data.forEach(activity -> stravaClient.getActivity(accessToken, activity.getId()).ifPresent(a -> createJCRActivity(userPath, a)));
-            getMyActivities(userPath, accessToken, startDate, page + 1);
+            if (!data.isEmpty()) {
+                getMyActivities(userPath, accessToken, startDate, page + 1);
+                /* try {
+                    Thread.sleep(60 * 1000);
+                    getMyActivities(userPath, accessToken, startDate, page + 1);
+                } catch (InterruptedException e) {
+                    logger.error("", e);
+                } */
+            }
         });
     }
 
