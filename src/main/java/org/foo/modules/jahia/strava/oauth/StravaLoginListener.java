@@ -1,6 +1,5 @@
 package org.foo.modules.jahia.strava.oauth;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
@@ -8,7 +7,6 @@ import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.jahia.params.valves.AuthValveContext;
 import org.jahia.services.content.JCRAutoSplitUtils;
 import org.jahia.services.content.JCRNodeWrapper;
-import org.jahia.services.content.JCRPublicationService;
 import org.jahia.services.usermanager.JahiaUser;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -32,8 +30,6 @@ public class StravaLoginListener implements EventHandler {
 
     @Reference
     private JCRTemplate jcrTemplate;
-    @Reference
-    private JCRPublicationService jcrPublicationService;
     @Reference
     private StravaClient stravaClient;
 
@@ -71,7 +67,6 @@ public class StravaLoginListener implements EventHandler {
             JCRAutoSplitUtils.enableAutoSplitting(jcrNodeWrapper,
                     "date," + STRAVA_ACTIVITY_DATE + ",yyyy;date," + STRAVA_ACTIVITY_DATE + ",MM", "jnt:contentFolder");
             jcrNodeWrapper.saveSession();
-            jcrPublicationService.publishByMainId(jcrNodeWrapper.getIdentifier());
             return true;
         } catch (RepositoryException e) {
             logger.error("", e);
