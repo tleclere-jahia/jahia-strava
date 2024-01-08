@@ -2,7 +2,7 @@ package org.foo.modules.jahia.strava.actions;
 
 import org.foo.modules.jahia.strava.client.Activity;
 import org.foo.modules.jahia.strava.client.StravaClient;
-import org.foo.modules.jahia.strava.oauth.StravaLoginListener;
+import org.foo.modules.jahia.strava.oauth.StravaApi20;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
@@ -16,8 +16,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.query.Query;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Calendar;
 
 public class SyncBackgroundJob extends BackgroundJob {
     private static final Logger logger = LoggerFactory.getLogger(SyncBackgroundJob.class);
@@ -27,43 +28,63 @@ public class SyncBackgroundJob extends BackgroundJob {
         String userPath = jobExecutionContext.getJobDetail().getJobDataMap().getString(BackgroundJob.JOB_USERKEY);
         if (userPath == null && logger.isDebugEnabled()) {
             logger.debug("User not found in jobDataMap: {}", jobExecutionContext.getJobDetail().getJobDataMap());
-            return;
+            throw new RuntimeException();
         }
 
         String accessToken = jobExecutionContext.getJobDetail().getJobDataMap().getString(JahiaOAuthConstants.ACCESS_TOKEN);
         if (accessToken == null && logger.isDebugEnabled()) {
             logger.debug("AccessToken not found in jobDataMap: {}", jobExecutionContext.getJobDetail().getJobDataMap());
-            return;
+            throw new RuntimeException();
         }
 
-        logger.info("Sync me");
-        getMyActivities(userPath, accessToken, null, 1);
-        logger.info(">>> END Sync me");
-    }
-
-    private void getMyActivities(String userPath, String accessToken, LocalDate startDate, int page) {
         StravaClient stravaClient = BundleUtils.getOsgiService(StravaClient.class, null);
         if (stravaClient == null) {
             logger.error("Strava client not found");
-            return;
+            throw new RuntimeException();
         }
 
+        logger.info("Sync me");
+        try {
+            if (!BundleUtils.getOsgiService(JCRTemplate.class, null).doExecuteWithSystemSessionAsUser(null, Constants.EDIT_WORKSPACE, null, session -> {
+                if (!session.nodeExists(userPath)) {
+                    logger.error("User {} not found", userPath);
+                    return false;
+                }
+                JCRNodeWrapper userNode = session.getNode(userPath);
+                LocalDateTime startDate = null;
+                if (userNode.hasProperty(StravaApi20.LAST_STRAVA_SYNC)) {
+                    Calendar lastStravaSync = userNode.getProperty(StravaApi20.LAST_STRAVA_SYNC).getDate();
+                    startDate = LocalDateTime.ofInstant(lastStravaSync.toInstant(), lastStravaSync.getTimeZone().toZoneId());
+                }
+                getMyActivities(stravaClient, userNode, accessToken, startDate, 1);
+                return true;
+            })) {
+                throw new RuntimeException();
+            }
+        } catch (RepositoryException e) {
+            logger.error("", e);
+            throw new RuntimeException(e);
+        }
+        logger.info(">>> END Sync me");
+    }
+
+    private static void getMyActivities(StravaClient stravaClient, JCRNodeWrapper userNode, String accessToken, LocalDateTime startDate, int page) {
         stravaClient.getActivities(accessToken, startDate, page).ifPresent(data -> {
             logger.info("{} activities found", data.size());
-            data.forEach(activity -> stravaClient.getActivity(accessToken, activity.getId()).ifPresent(a -> createJCRActivity(userPath, a)));
+            data.forEach(activity -> stravaClient.getActivity(accessToken, activity.getId()).ifPresent(a -> createJCRActivity(userNode, a)));
+            try {
+                userNode.setProperty(StravaApi20.LAST_STRAVA_SYNC, StravaApi20.LAST_STRAVA_SYNC_FORMATTER.format(LocalDateTime.now(ZoneOffset.UTC)));
+                userNode.saveSession();
+            } catch (RepositoryException e) {
+                logger.error("", e);
+            }
             if (!data.isEmpty()) {
-                getMyActivities(userPath, accessToken, startDate, page + 1);
-                /* try {
-                    Thread.sleep(60 * 1000);
-                    getMyActivities(userPath, accessToken, startDate, page + 1);
-                } catch (InterruptedException e) {
-                    logger.error("", e);
-                } */
+                getMyActivities(stravaClient, userNode, accessToken, startDate, page + 1);
             }
         });
     }
 
-    private JCRNodeWrapper getOrCreateActivityNode(JCRNodeWrapper rootNode, long activityId) throws RepositoryException {
+    private static JCRNodeWrapper getOrCreateActivityNode(JCRNodeWrapper rootNode, long activityId) throws RepositoryException {
         String nodename = "activity-" + activityId;
         JCRNodeIteratorWrapper it = rootNode.getSession().getWorkspace().getQueryManager().createQuery("SELECT * FROM [foont:stravaActivity] WHERE ISDESCENDANTNODE('" + rootNode.getPath() + "') AND localname() = '" + nodename + "'", Query.JCR_SQL2).execute().getNodes();
         if (it.hasNext()) {
@@ -74,27 +95,18 @@ public class SyncBackgroundJob extends BackgroundJob {
         return rootNode.addNode(nodename, "foont:stravaActivity");
     }
 
-    private void createJCRActivity(String userPath, Activity activity) {
-        JCRTemplate jcrTemplate = BundleUtils.getOsgiService(JCRTemplate.class, null);
+    private static void createJCRActivity(JCRNodeWrapper userNode, Activity activity) {
         try {
-            jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.EDIT_WORKSPACE, null, session -> {
-                if (!session.nodeExists(userPath)) {
-                    logger.error("User {} not found", userPath);
-                    return false;
-                }
-                JCRNodeWrapper node = session.getNode(userPath);
-                if (!node.hasNode(StravaLoginListener.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
-                    logger.error("User {} has not activities folder", userPath);
-                    return false;
-                }
-
-                node = node.getNode(StravaLoginListener.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
+            JCRNodeWrapper node = userNode;
+            if (!node.hasNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
+                logger.error("User {} has not activities folder", userNode.getPath());
+            } else {
+                node = node.getNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
                 JCRNodeWrapper activityNode = getOrCreateActivityNode(node, activity.getId());
-                activityNode.setProperty(StravaLoginListener.STRAVA_ACTIVITY_DATE, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(activity.getStartDate()));
-                activityNode.setProperty(StravaLoginListener.STRAVA_ACTIVITY_JSON, activity.getJson());
+                activityNode.setProperty(StravaApi20.STRAVA_ACTIVITY_DATE, StravaApi20.LAST_STRAVA_SYNC_FORMATTER.format(activity.getStartDate()));
+                activityNode.setProperty(StravaApi20.STRAVA_ACTIVITY_JSON, activity.getJson());
                 activityNode.saveSession();
-                return true;
-            });
+            }
         } catch (RepositoryException e) {
             logger.error("", e);
         }

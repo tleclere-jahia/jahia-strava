@@ -18,7 +18,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
@@ -40,7 +40,7 @@ public class StravaClient {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(new SimpleModule()
-                        .addDeserializer(PolylineMap.class, new PolylineMapDeserializer(PolylineMap.class))
+                .addDeserializer(PolylineMap.class, new PolylineMapDeserializer(PolylineMap.class))
                 .addDeserializer(LatLng.class, new LatLngDeserializer(LatLng.class)));
         objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
@@ -86,14 +86,13 @@ public class StravaClient {
         return Optional.empty();
     }
 
-    public Optional<List<Activity>> getActivities(String accessToken, LocalDate startDate, int page) {
+    public Optional<List<Activity>> getActivities(String accessToken, LocalDateTime startDate, int page) {
         StringBuilder url = new StringBuilder(StravaApi20.API)
                 .append("/api/v3/athlete/activities")
                 .append("?");
 //                .append("per_page=2&");
         if (startDate != null) {
-            url.append("after=").append(startDate.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
-                    .append("&");
+            url.append("after=").append(startDate.toInstant(ZoneOffset.UTC).toEpochMilli() / 1000).append("&");
         }
         url.append("page=").append(page);
         try {

@@ -18,6 +18,7 @@
 <%--@elvariable id="url" type="org.jahia.services.render.URLGenerator"--%>
 <%--@elvariable id="currentUser" type="org.jahia.services.usermanager.JahiaUser"--%>
 <jcr:node var="userNode" path="${currentUser.localPath}"/>
+<template:addCacheDependency node="${userNode}"/>
 <h1><fmt:message key="stravaMap.user.hello">
     <fmt:param value="${userNode.properties['j:firstName'].string} ${userNode.properties['j:lastName'].string}"/>
 </fmt:message></h1>
@@ -27,7 +28,9 @@
 <c:set var="nbActivities" value="${functions:length(activities)}"/>
 <fmt:message key="stravaMap.user.activities">
     <fmt:param value="${nbActivities}"/>
-</fmt:message>, <a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
+</fmt:message>, <fmt:message key="stravaMap.user.lastStravaSync"/>: <fmt:formatDate pattern="dd/MM/yyyy HH:mm"
+        value="${userNode.properties['lastStravaSync'].time}"/>,
+<a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
         key="stravaMap.user.syncMe"/></a>
 
 <template:addResources key="leaflet">
@@ -36,7 +39,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
-    <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css' rel='stylesheet' />
+    <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css'
+          rel='stylesheet'/>
 </template:addResources>
 <div id="map-${currentNode.identifier}" style="height:580px"></div>
 
@@ -88,7 +92,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            const map = L.map('map-${currentNode.identifier}', { fullscreenControl: true });
+            const map = L.map('map-${currentNode.identifier}', {fullscreenControl: true});
             L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://mapbox.com">Mapbox</a>',
                 maxZoom: 18
@@ -103,9 +107,9 @@
                     lineJoin: 'round'
                 }).addTo(map)
                     .bindPopup(buildDescription(activity))
-                    .bindTooltip(activity['name'], { sticky: true })
-                    .on('mouseover', e => e.target.setStyle({ color: 'red', weight: 5, opacity: 1 }))
-                    .on('mouseout', e => e.target.setStyle({ color: '#9900CC', weight: 2, opacity: .7 }));
+                    .bindTooltip(activity['name'], {sticky: true})
+                    .on('mouseover', e => e.target.setStyle({color: 'red', weight: 5, opacity: 1}))
+                    .on('mouseout', e => e.target.setStyle({color: '#9900CC', weight: 2, opacity: .7}));
             });
 
             navigator.geolocation.getCurrentPosition(location => {

@@ -24,10 +24,6 @@ import java.util.Map;
 public class StravaLoginListener implements EventHandler {
     private static final Logger logger = LoggerFactory.getLogger(StravaLoginListener.class);
 
-    public static final String MY_STRAVA_PROFILE_ACTIVITES_FOLDER = "strava-activities";
-    public static final String STRAVA_ACTIVITY_DATE = "date";
-    public static final String STRAVA_ACTIVITY_JSON = "jsonValue";
-
     @Reference
     private JCRTemplate jcrTemplate;
     @Reference
@@ -59,13 +55,13 @@ public class StravaLoginListener implements EventHandler {
     private boolean checkMyStravaProfileActivitiesFolder(JCRNodeWrapper jcrUserNode) {
         try {
             JCRNodeWrapper jcrNodeWrapper;
-            if (!jcrUserNode.hasNode(MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
-                jcrNodeWrapper = jcrUserNode.addNode(MY_STRAVA_PROFILE_ACTIVITES_FOLDER, "jnt:contentFolder");
+            if (!jcrUserNode.hasNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
+                jcrNodeWrapper = jcrUserNode.addNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER, "jnt:contentFolder");
             } else {
-                jcrNodeWrapper = jcrUserNode.getNode(MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
+                jcrNodeWrapper = jcrUserNode.getNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
             }
             JCRAutoSplitUtils.enableAutoSplitting(jcrNodeWrapper,
-                    "date," + STRAVA_ACTIVITY_DATE + ",yyyy;date," + STRAVA_ACTIVITY_DATE + ",MM", "jnt:contentFolder");
+                    "date," + StravaApi20.STRAVA_ACTIVITY_DATE + ",yyyy;date," + StravaApi20.STRAVA_ACTIVITY_DATE + ",MM", "jnt:contentFolder");
             jcrNodeWrapper.saveSession();
             return true;
         } catch (RepositoryException e) {
