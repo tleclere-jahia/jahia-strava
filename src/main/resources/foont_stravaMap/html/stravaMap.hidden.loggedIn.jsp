@@ -35,6 +35,8 @@
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
+    <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css' rel='stylesheet' />
 </template:addResources>
 <div id="map-${currentNode.identifier}" style="height:580px"></div>
 
@@ -77,8 +79,16 @@
         activities.push(${activity.properties['jsonValue'].string});
         </c:forEach>
 
+        const buildDescription = activity => {
+            return activity['name'] + "<br/>" +
+                activity['start_date'] + "<br/>" +
+                activity['distance'] + "m<br/>" +
+                activity['total_elevation_gain'] + "m<br/>" +
+                activity['moving_time'] + "s";
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
-            const map = L.map('map-${currentNode.identifier}');
+            const map = L.map('map-${currentNode.identifier}', { fullscreenControl: true });
             L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://mapbox.com">Mapbox</a>',
                 maxZoom: 18
@@ -91,7 +101,11 @@
                     weight: 2,
                     opacity: .7,
                     lineJoin: 'round'
-                }).addTo(map);
+                }).addTo(map)
+                    .bindPopup(buildDescription(activity))
+                    .bindTooltip(activity['name'], { sticky: true })
+                    .on('mouseover', e => e.target.setStyle({ color: 'red', weight: 5, opacity: 1 }))
+                    .on('mouseout', e => e.target.setStyle({ color: '#9900CC', weight: 2, opacity: .7 }));
             });
 
             navigator.geolocation.getCurrentPosition(location => {
