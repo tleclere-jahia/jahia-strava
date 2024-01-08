@@ -19,6 +19,7 @@
 <%--@elvariable id="currentUser" type="org.jahia.services.usermanager.JahiaUser"--%>
 <jcr:node var="userNode" path="${currentUser.localPath}"/>
 <template:addCacheDependency node="${userNode}"/>
+
 <h1><fmt:message key="stravaMap.user.hello">
     <fmt:param value="${userNode.properties['j:firstName'].string} ${userNode.properties['j:lastName'].string}"/>
 </fmt:message></h1>
@@ -26,12 +27,13 @@
 <template:addCacheDependency flushOnPathMatchingRegexp="${userNode.path}/strava-activities/.*"/>
 <c:set var="activities" value="${jcr:getDescendantNodes(userNode, 'foont:stravaActivity')}"/>
 <c:set var="nbActivities" value="${functions:length(activities)}"/>
-<fmt:message key="stravaMap.user.activities">
-    <fmt:param value="${nbActivities}"/>
-</fmt:message>, <fmt:message key="stravaMap.user.lastStravaSync"/>: <fmt:formatDate pattern="dd/MM/yyyy HH:mm"
-        value="${userNode.properties['lastStravaSync'].time}"/>,
-<a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
-        key="stravaMap.user.syncMe"/></a>
+
+<div>
+    <fmt:message key="stravaMap.user.activities"/>&nbsp;(<fmt:message key="stravaMap.user.lastStravaSync"/>:
+    <fmt:formatDate pattern="dd/MM/yyyy HH:mm" value="${userNode.properties['lastStravaSync'].time}"/>)<br/>
+    <a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
+            key="stravaMap.user.syncMe"/></a>&nbsp;(<fmt:message key="stravaMap.user.syncMe.description"/>)
+</div>
 
 <template:addResources key="leaflet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -42,81 +44,11 @@
     <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css'
           rel='stylesheet'/>
 </template:addResources>
+<template:addResources type="javascript" resources="strava-map.js"/>
 <div id="map-${currentNode.identifier}" style="height:580px"></div>
 
 <template:addResources type="inlinejavascript">
     <script>
-        //decode an encoded string
-        const decode = encoded => {
-            //precision
-            const inv = 1.0 / 1e5;
-            const decoded = [];
-            const previous = [0, 0];
-            let i = 0;
-            //for each byte
-            while (i < encoded.length) {
-                //for each coord (lat, lon)
-                const ll = [0, 0]
-                for (let j = 0; j < 2; j++) {
-                    let shift = 0;
-                    let byte = 0x20;
-                    //keep decoding bytes until you have this coord
-                    while (byte >= 0x20) {
-                        byte = encoded.charCodeAt(i++) - 63;
-                        ll[j] |= (byte & 0x1f) << shift;
-                        shift += 5;
-                    }
-                    //add previous offset to get final value and remember for next one
-                    ll[j] = previous[j] + (ll[j] & 1 ? ~(ll[j] >> 1) : (ll[j] >> 1));
-                    previous[j] = ll[j];
-                }
-                //scale by precision and chop off long coords also flip the positions so
-                //its the far more standard lon,lat instead of lat,lon
-                decoded.push([ll[0] * inv, ll[1] * inv]);
-            }
-            //hand back the list of coordinates
-            return decoded;
-        };
-
-        const activities = [];
-        <c:forEach items="${activities}" var="activity">
-        activities.push(${activity.properties['jsonValue'].string});
-        </c:forEach>
-
-        const buildDescription = activity => {
-            return activity['name'] + "<br/>" +
-                activity['start_date'] + "<br/>" +
-                activity['distance'] + "m<br/>" +
-                activity['total_elevation_gain'] + "m<br/>" +
-                activity['moving_time'] + "s";
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const map = L.map('map-${currentNode.identifier}', {fullscreenControl: true});
-            L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://mapbox.com">Mapbox</a>',
-                maxZoom: 18
-            }).addTo(map);
-
-            activities.forEach(activity => {
-                console.log(activity);
-                L.polyline(decode(activity['map']['polyline']), {
-                    color: '#9900CC',
-                    weight: 2,
-                    opacity: .7,
-                    lineJoin: 'round'
-                }).addTo(map)
-                    .bindPopup(buildDescription(activity))
-                    .bindTooltip(activity['name'], {sticky: true})
-                    .on('mouseover', e => e.target.setStyle({color: 'red', weight: 5, opacity: 1}))
-                    .on('mouseout', e => e.target.setStyle({color: '#9900CC', weight: 2, opacity: .7}));
-            });
-
-            navigator.geolocation.getCurrentPosition(location => {
-                const latlng = new L.LatLng(location.coords.latitude, location.coords.longitude);
-                map.setView(latlng, 13);
-                const marker = L.marker(latlng).addTo(map);
-            });
-        });
+        document.addEventListener("DOMContentLoaded", () => initMap('map-${currentNode.identifier}', '${userNode.path}'));
     </script>
 </template:addResources>

@@ -1,0 +1,10 @@
+jahia-strava:
+  description: CurrentUser can access graphql API
+  auto_apply:
+    - origin: hosted
+  grants:
+    - api: graphql
+      node: none
+    - api: graphql.Current_32_user.node, graphql.GenericJCRNode
+      node:
+        pathPattern: /users(/.*)?
