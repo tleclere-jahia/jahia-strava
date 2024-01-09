@@ -25,30 +25,34 @@
 </fmt:message></h1>
 
 <template:addCacheDependency flushOnPathMatchingRegexp="${userNode.path}/strava-activities/.*"/>
-<c:set var="activities" value="${jcr:getDescendantNodes(userNode, 'foont:stravaActivity')}"/>
-<c:set var="nbActivities" value="${functions:length(activities)}"/>
 
-<div>
-    <fmt:message key="stravaMap.user.activities"/>&nbsp;(<fmt:message key="stravaMap.user.lastStravaSync"/>:
-    <fmt:formatDate pattern="dd/MM/yyyy HH:mm" value="${userNode.properties['lastStravaSync'].time}"/>)<br/>
-    <a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
-            key="stravaMap.user.syncMe"/></a>&nbsp;(<fmt:message key="stravaMap.user.syncMe.description"/>)
-</div>
+<c:if test="${!renderContext.editMode}">
+    <div>
+        <fmt:message key="stravaMap.user.activities"/>&nbsp;(<fmt:message key="stravaMap.user.lastStravaSync"/>:
+        <fmt:formatDate pattern="dd/MM/yyyy HH:mm" value="${userNode.properties['lastStravaSync'].time}"/>)<br/>
+        <a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
+                key="stravaMap.user.syncMe"/></a>&nbsp;(<fmt:message key="stravaMap.user.syncMe.description"/>)
+    </div>
 
-<template:addResources key="leaflet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
-    <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css'
-          rel='stylesheet'/>
-</template:addResources>
-<template:addResources type="javascript" resources="strava-map.js"/>
-<div id="map-${currentNode.identifier}" style="height:580px"></div>
+    <template:addResources key="leaflet">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
+        <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css'
+              rel='stylesheet'/>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"/>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
+        <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    </template:addResources>
+    <template:addResources type="javascript" resources="strava-map.js"/>
+    <template:addResources type="css" resources="strava-map.css"/>
+    <div id="map-${currentNode.identifier}" class="map"><div id="loading" class="ribbon"><fmt:message key="stravaMap.loading" /></div></div>
 
-<template:addResources type="inlinejavascript">
-    <script>
-        document.addEventListener("DOMContentLoaded", () => initMap('map-${currentNode.identifier}', '${userNode.path}'));
-    </script>
-</template:addResources>
+    <template:addResources type="inlinejavascript">
+        <script>
+            document.addEventListener("DOMContentLoaded", () => initMap('map-${currentNode.identifier}'));
+        </script>
+    </template:addResources>
+</c:if>

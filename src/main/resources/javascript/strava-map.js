@@ -32,17 +32,17 @@ const decodePolyline = polyline => {
     return decoded;
 };
 
-const initMap = (domId, userPath) => {
-    const map = L.map(domId, {fullscreenControl: true});
-    L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://mapbox.com">Mapbox</a>',
-        maxZoom: 18
-    }).addTo(map);
-    navigator.geolocation.getCurrentPosition(location => {
-        const latlng = new L.LatLng(location.coords.latitude, location.coords.longitude);
-        map.setView(latlng, 11);
-        const marker = L.marker(latlng).addTo(map);
+const initMap = domId => {
+    const map = L.map(domId, {
+        fullscreenControl: true,
+        layers: [
+            L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://mapbox.com">Mapbox</a>',
+                maxZoom: 18
+            })
+        ]
     });
+    navigator.geolocation.getCurrentPosition(location => map.setView(new L.LatLng(location.coords.latitude, location.coords.longitude), 11));
 
     loadActivities(map);
 };
@@ -55,21 +55,22 @@ const buildDescription = activity => {
         activity['moving_time'] + "s";
 };
 
-const addActivity = (activity, map) => {
-    console.log(activity);
-    L.polyline(decodePolyline(activity['map']['polyline']), {
+const createPolyline = activity => {
+    const polyline = L.polyline(decodePolyline(activity['map']['polyline']), {
         color: '#9900CC',
         weight: 2,
         opacity: .7,
         lineJoin: 'round'
-    }).addTo(map)
-        .bindPopup(buildDescription(activity))
-        .bindTooltip(activity['name'], {sticky: true})
+    });
+    polyline.bindTooltip(activity['name'], {sticky: true})
         .on('mouseover', e => e.target.setStyle({color: 'red', weight: 5, opacity: 1}))
         .on('mouseout', e => e.target.setStyle({color: '#9900CC', weight: 2, opacity: .7}));
+    return polyline;
 };
 
 const loadActivities = async map => {
+    const domLoading = document.getElementById('loading');
+    domLoading.style.display = 'block';
     const response = await fetch('/modules/graphql', {
         method: 'POST',
         body: JSON.stringify({
@@ -85,9 +86,6 @@ const loadActivities = async map => {
                                         json: property(name: "jsonValue") {
                                             value
                                         }
-                                        date: property(name: "date") {
-                                            value
-                                        }
                                     }
                                 }
                             }
@@ -97,5 +95,22 @@ const loadActivities = async map => {
     });
     const data = await response.json();
     document.getElementById('nbActivities').innerText = data.data.currentUser.node.descendants.pageInfo.totalCount;
-    data.data.currentUser.node.descendants.nodes.forEach(node => addActivity(JSON.parse(node.json.value), map));
+    const markers = L.markerClusterGroup({removeOutsideVisibleBounds: false});
+    data.data.currentUser.node.descendants.nodes.forEach(node => {
+        const activity = JSON.parse(node.json.value);
+        if (activity['start_latlng'] && Array.isArray(activity['start_latlng']) && activity['start_latlng'].length === 2) {
+            markers.addLayer(L.marker(new L.LatLng(activity['start_latlng'][0], activity['start_latlng'][1]), {
+                title: activity['name'],
+                activity
+            }));
+        }
+    });
+    markers.on('click', e => {
+        const activity = e.layer.options.activity;
+        L.popup(e.latlng, {content: buildDescription(activity), polyline: createPolyline(activity)}).openOn(map)
+    });
+    map.on('popupopen', e => e.popup.options.polyline.addTo(map))
+        .on('popupclose', e => e.popup.options.polyline.remove());
+    map.addLayer(markers);
+    domLoading.style.display = 'none';
 };
