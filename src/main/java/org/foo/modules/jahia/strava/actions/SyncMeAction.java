@@ -1,6 +1,5 @@
 package org.foo.modules.jahia.strava.actions;
 
-import org.jahia.api.settings.SettingsBean;
 import org.jahia.bin.Action;
 import org.jahia.bin.ActionResult;
 import org.jahia.bin.Render;
@@ -34,8 +33,6 @@ public class SyncMeAction extends Action {
 
     @Reference
     private SchedulerService schedulerService;
-    @Reference
-    private SettingsBean settingsBean;
 
     private final Set<JobDetail> jobDetails;
 
@@ -49,7 +46,7 @@ public class SyncMeAction extends Action {
     private void onDeactivate() {
         jobDetails.forEach(jobDetail -> {
             try {
-                if (!schedulerService.getAllJobs(jobDetail.getGroup()).isEmpty() && settingsBean.isProcessingServer()) {
+                if (!schedulerService.getAllJobs(jobDetail.getGroup()).isEmpty()) {
                     schedulerService.getAllJobs(jobDetail.getGroup()).forEach(detail -> {
                         try {
                             schedulerService.getScheduler().deleteJob(detail.getName(), detail.getGroup());
@@ -74,10 +71,8 @@ public class SyncMeAction extends Action {
             jobDataMap.put(JahiaOAuthConstants.ACCESS_TOKEN, (String) tokenData.get(JahiaOAuthConstants.ACCESS_TOKEN));
             jobDetail.setJobDataMap(jobDataMap);
             try {
-                if (settingsBean.isProcessingServer()) {
-                    schedulerService.getScheduler().scheduleJob(jobDetail, new SimpleTrigger(SyncBackgroundJob.class.getSimpleName() + "_trigger", jobDetail.getGroup()));
-                    jobDetails.add(jobDetail);
-                }
+                schedulerService.getScheduler().scheduleJob(jobDetail, new SimpleTrigger(SyncBackgroundJob.class.getSimpleName() + "_trigger", jobDetail.getGroup()));
+                jobDetails.add(jobDetail);
                 return new ActionResult(HttpServletResponse.SC_OK, resource.getNode().getPath());
             } catch (SchedulerException e) {
                 logger.error("", e);
