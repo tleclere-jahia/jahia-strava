@@ -32,8 +32,8 @@ const decodePolyline = polyline => {
     return decoded;
 };
 
-const initMap = domId => {
-    const map = L.map(domId, {
+const initMap = nodeIdentifier => {
+    const map = L.map(`map-${nodeIdentifier}`, {
         fullscreenControl: true,
         layers: [
             L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -44,7 +44,7 @@ const initMap = domId => {
     });
     navigator.geolocation.getCurrentPosition(location => map.setView(new L.LatLng(location.coords.latitude, location.coords.longitude), 11));
 
-    loadActivities(map);
+    loadActivities(map, document.getElementById(`loading-${nodeIdentifier}`));
 };
 
 const buildDescription = activity => {
@@ -68,8 +68,7 @@ const createPolyline = activity => {
     return polyline;
 };
 
-const loadActivities = async map => {
-    const domLoading = document.getElementById('loading');
+const loadActivities = async (map, domLoading) => {
     domLoading.style.display = 'block';
     const response = await fetch('/modules/graphql', {
         method: 'POST',
@@ -113,4 +112,48 @@ const loadActivities = async map => {
         .on('popupclose', e => e.popup.options.polyline.remove());
     map.addLayer(markers);
     domLoading.style.display = 'none';
+};
+
+const syncData = (urlServer, nodeIdentifier, userId) => {
+    const domLoading = document.getElementById(`loading-${nodeIdentifier}`);
+    const backgroundJobSocket = new WebSocket(`${urlServer.replace('http', 'ws')}/modules/graphqlws`);
+    backgroundJobSocket.onopen = () => backgroundJobSocket.send(JSON.stringify({
+        type: 'connection_init',
+        payload: {}
+    }));
+    backgroundJobSocket.onmessage = event => {
+        console.log(event);
+        const data = JSON.parse(event.data)
+        if (data.type === 'connection_ack') {
+            backgroundJobSocket.send(JSON.stringify({
+                type: 'start',
+                id: userId,
+                payload: {
+                    query: `subscription {
+                        backgroundJobSubscription(
+                            targetScheduler: SCHEDULER
+                            filterByGroups: ["SyncBackgroundJob"]
+                        ) {
+                            name
+                            jobStatus
+                            jobState
+                            duration
+                        }
+                    }`
+                }
+            }));
+        } else if (data.type === 'data') {
+            if (data.payload.data.backgroundJobSubscription?.jobState === 'STARTED') {
+                domLoading.style.display = 'block';
+            } else if (data.payload.data.backgroundJobSubscription?.jobState === 'FINISHED') {
+                location.reload();
+            }
+        }
+    }
+};
+
+const syncMe = (e, url) => {
+    e.preventDefault();
+    fetch(url);
+    return false;
 };

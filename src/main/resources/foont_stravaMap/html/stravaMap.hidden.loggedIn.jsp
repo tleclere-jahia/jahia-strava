@@ -30,7 +30,7 @@
     <div>
         <fmt:message key="stravaMap.user.activities"/>&nbsp;(<fmt:message key="stravaMap.user.lastStravaSync"/>:
         <fmt:formatDate pattern="dd/MM/yyyy HH:mm" value="${userNode.properties['lastStravaSync'].time}"/>)<br/>
-        <a href="${url.base}${renderContext.mainResource.node.path}.syncMe.do"><fmt:message
+        <a href="#" onclick="return syncMe(event, '${url.base}${renderContext.mainResource.node.path}.syncMe.do')"><fmt:message
                 key="stravaMap.user.syncMe"/></a>&nbsp;(<fmt:message key="stravaMap.user.syncMe.description"/>)
     </div>
 
@@ -48,11 +48,16 @@
     </template:addResources>
     <template:addResources type="javascript" resources="strava-map.js"/>
     <template:addResources type="css" resources="strava-map.css"/>
-    <div id="map-${currentNode.identifier}" class="map"><div id="loading" class="ribbon"><fmt:message key="stravaMap.loading" /></div></div>
+    <div id="map-${currentNode.identifier}" class="map">
+        <div id="loading-${currentNode.identifier}" class="ribbon"><fmt:message key="stravaMap.loading"/></div>
+    </div>
 
     <template:addResources type="inlinejavascript">
         <script>
-            document.addEventListener("DOMContentLoaded", () => initMap('map-${currentNode.identifier}'));
+            document.addEventListener("DOMContentLoaded", () => {
+                initMap('${currentNode.identifier}');
+                syncData('${url.server}${url.context}', '${currentNode.identifier}', '${userNode.identifier}');
+            });
         </script>
     </template:addResources>
 </c:if>
