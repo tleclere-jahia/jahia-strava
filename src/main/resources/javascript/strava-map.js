@@ -122,7 +122,6 @@ const syncData = (urlServer, nodeIdentifier, userId) => {
         payload: {}
     }));
     backgroundJobSocket.onmessage = event => {
-        console.log(event);
         const data = JSON.parse(event.data)
         if (data.type === 'connection_ack') {
             backgroundJobSocket.send(JSON.stringify({

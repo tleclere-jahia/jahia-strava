@@ -12,6 +12,7 @@ public final class StravaApi20 extends DefaultApi20 {
     public static final String GROUPNAME = "strava-users";
     public static final String SITEKEY = null;
     public static final String MY_STRAVA_PROFILE_ACTIVITES_FOLDER = "strava-activities";
+    public static final String STRAVA_ACTIVITY = "foont:stravaActivity";
     public static final String STRAVA_ACTIVITY_DATE = "date";
     public static final String STRAVA_ACTIVITY_JSON = "jsonValue";
     public static final String LAST_STRAVA_SYNC = "lastStravaSync";

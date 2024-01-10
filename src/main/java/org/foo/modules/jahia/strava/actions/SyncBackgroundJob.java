@@ -7,6 +7,7 @@ import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.jahia.osgi.BundleUtils;
+import org.jahia.services.content.JCRAutoSplitUtils;
 import org.jahia.services.content.JCRNodeIteratorWrapper;
 import org.jahia.services.content.JCRNodeWrapper;
 import org.jahia.services.scheduler.BackgroundJob;
@@ -16,8 +17,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.query.Query;
+import javax.jcr.query.RowIterator;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Calendar;
 
 public class SyncBackgroundJob extends BackgroundJob {
@@ -57,6 +58,12 @@ public class SyncBackgroundJob extends BackgroundJob {
                     startDate = LocalDateTime.ofInstant(lastStravaSync.toInstant(), lastStravaSync.getTimeZone().toZoneId());
                 }
                 getMyActivities(stravaClient, userNode, accessToken, startDate, 1);
+
+                RowIterator it = session.getWorkspace().getQueryManager().createQuery("SELECT * FROM [" + StravaApi20.STRAVA_ACTIVITY + "] WHERE ISDESCENDANTNODE('" + userNode.getPath() + "') ORDER BY [" + StravaApi20.STRAVA_ACTIVITY_DATE + "] DESC", Query.JCR_SQL2).execute().getRows();
+                if (it.hasNext()) {
+                    userNode.setProperty(StravaApi20.LAST_STRAVA_SYNC, it.nextRow().getNode().getProperty(StravaApi20.STRAVA_ACTIVITY_DATE).getDate());
+                    userNode.saveSession();
+                }
                 return true;
             })) {
                 throw new RuntimeException();
@@ -72,12 +79,6 @@ public class SyncBackgroundJob extends BackgroundJob {
         stravaClient.getActivities(accessToken, startDate, page).ifPresent(data -> {
             logger.info("{} activities found", data.size());
             data.forEach(activity -> stravaClient.getActivity(accessToken, activity.getId()).ifPresent(a -> createJCRActivity(userNode, a)));
-            try {
-                userNode.setProperty(StravaApi20.LAST_STRAVA_SYNC, StravaApi20.LAST_STRAVA_SYNC_FORMATTER.format(LocalDateTime.now(ZoneOffset.UTC)));
-                userNode.saveSession();
-            } catch (RepositoryException e) {
-                logger.error("", e);
-            }
             if (!data.isEmpty()) {
                 getMyActivities(stravaClient, userNode, accessToken, startDate, page + 1);
             }
@@ -86,19 +87,37 @@ public class SyncBackgroundJob extends BackgroundJob {
 
     private static JCRNodeWrapper getOrCreateActivityNode(JCRNodeWrapper rootNode, long activityId) throws RepositoryException {
         String nodename = "activity-" + activityId;
-        JCRNodeIteratorWrapper it = rootNode.getSession().getWorkspace().getQueryManager().createQuery("SELECT * FROM [foont:stravaActivity] WHERE ISDESCENDANTNODE('" + rootNode.getPath() + "') AND localname() = '" + nodename + "'", Query.JCR_SQL2).execute().getNodes();
+        JCRNodeIteratorWrapper it = rootNode.getSession().getWorkspace().getQueryManager().createQuery("SELECT * FROM [" + StravaApi20.STRAVA_ACTIVITY + "] WHERE ISDESCENDANTNODE('" + rootNode.getPath() + "') AND localname() = '" + nodename + "'", Query.JCR_SQL2).execute().getNodes();
         if (it.hasNext()) {
             logger.info("Activity {} already exists", activityId);
             return (JCRNodeWrapper) it.nextNode();
         }
         logger.info("Create activity {}", activityId);
-        return rootNode.addNode(nodename, "foont:stravaActivity");
+        return rootNode.addNode(nodename, StravaApi20.STRAVA_ACTIVITY);
+    }
+
+    public static boolean checkMyStravaProfileActivitiesFolder(JCRNodeWrapper jcrUserNode) {
+        try {
+            JCRNodeWrapper jcrNodeWrapper;
+            if (!jcrUserNode.hasNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
+                jcrNodeWrapper = jcrUserNode.addNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER, "jnt:contentFolder");
+            } else {
+                jcrNodeWrapper = jcrUserNode.getNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
+            }
+            JCRAutoSplitUtils.enableAutoSplitting(jcrNodeWrapper,
+                    "date," + StravaApi20.STRAVA_ACTIVITY_DATE + ",yyyy;date," + StravaApi20.STRAVA_ACTIVITY_DATE + ",MM", "jnt:contentFolder");
+            jcrNodeWrapper.saveSession();
+            return true;
+        } catch (RepositoryException e) {
+            logger.error("", e);
+        }
+        return false;
     }
 
     private static void createJCRActivity(JCRNodeWrapper userNode, Activity activity) {
         try {
             JCRNodeWrapper node = userNode;
-            if (!node.hasNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
+            if (!checkMyStravaProfileActivitiesFolder(userNode)) {
                 logger.error("User {} has not activities folder", userNode.getPath());
             } else {
                 node = node.getNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);

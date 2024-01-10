@@ -1,11 +1,11 @@
 package org.foo.modules.jahia.strava.oauth;
 
+import org.foo.modules.jahia.strava.actions.SyncBackgroundJob;
 import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.jahia.params.valves.AuthValveContext;
-import org.jahia.services.content.JCRAutoSplitUtils;
 import org.jahia.services.content.JCRNodeWrapper;
 import org.jahia.services.usermanager.JahiaUser;
 import org.osgi.service.component.annotations.Component;
@@ -42,7 +42,7 @@ public class StravaLoginListener implements EventHandler {
                             logger.error("User {} not found.", jahiaUser.getLocalPath());
                             return false;
                         }
-                        return checkMyStravaProfileActivitiesFolder(jcrUserNode)
+                        return SyncBackgroundJob.checkMyStravaProfileActivitiesFolder(jcrUserNode)
                                 && saveTokenData(jcrUserNode, httpServletRequest);
                     });
                 } catch (RepositoryException e) {
@@ -50,24 +50,6 @@ public class StravaLoginListener implements EventHandler {
                 }
             }
         }
-    }
-
-    private boolean checkMyStravaProfileActivitiesFolder(JCRNodeWrapper jcrUserNode) {
-        try {
-            JCRNodeWrapper jcrNodeWrapper;
-            if (!jcrUserNode.hasNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
-                jcrNodeWrapper = jcrUserNode.addNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER, "jnt:contentFolder");
-            } else {
-                jcrNodeWrapper = jcrUserNode.getNode(StravaApi20.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
-            }
-            JCRAutoSplitUtils.enableAutoSplitting(jcrNodeWrapper,
-                    "date," + StravaApi20.STRAVA_ACTIVITY_DATE + ",yyyy;date," + StravaApi20.STRAVA_ACTIVITY_DATE + ",MM", "jnt:contentFolder");
-            jcrNodeWrapper.saveSession();
-            return true;
-        } catch (RepositoryException e) {
-            logger.error("", e);
-        }
-        return false;
     }
 
     private boolean saveTokenData(JCRNodeWrapper jcrUserNode, HttpServletRequest httpServletRequest) {
