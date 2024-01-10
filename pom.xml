@@ -64,8 +64,7 @@
         <developerConnection>scm:dummy:uri</developerConnection>
     </scm>
     <properties>
-        <jahia-depends>default,jahia-authentication,jahia-oauth</jahia-depends>
-        <Jahia-Module-Priority>2</Jahia-Module-Priority>
+        <jahia-depends>jahia-authentication,jahia-oauth</jahia-depends>
         <jahia.plugin.version>6.9</jahia.plugin.version>
     </properties>
     <dependencies>
