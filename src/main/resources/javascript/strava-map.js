@@ -40,11 +40,13 @@ const initMap = nodeIdentifier => {
                 attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://mapbox.com">Mapbox</a>',
                 maxZoom: 18
             })
-        ]
+        ],
+        center: [46.966671, -0.21667],
+        zoom: 11
     });
     navigator.geolocation.getCurrentPosition(location => map.setView(new L.LatLng(location.coords.latitude, location.coords.longitude), 11));
 
-    loadActivities(map, document.getElementById(`loading-${nodeIdentifier}`));
+    loadActivities(map, document.getElementById(`loading-${nodeIdentifier}`), document.getElementById(`error-${nodeIdentifier}`));
 };
 
 const buildDescription = activity => {
@@ -68,7 +70,7 @@ const createPolyline = activity => {
     return polyline;
 };
 
-const loadActivities = async (map, domLoading) => {
+const loadActivities = async (map, domLoading, domError) => {
     domLoading.style.display = 'block';
     const response = await fetch('/modules/graphql', {
         method: 'POST',
@@ -92,43 +94,46 @@ const loadActivities = async (map, domLoading) => {
             }`
         })
     });
-    const data = await response.json();
-    document.getElementById('nbActivities').innerText = data.data.currentUser.node.descendants.pageInfo.totalCount;
-    const markers = L.markerClusterGroup({removeOutsideVisibleBounds: false});
-    data.data.currentUser.node.descendants.nodes.forEach(node => {
-        const activity = JSON.parse(node.json.value);
-        if (activity['start_latlng'] && Array.isArray(activity['start_latlng']) && activity['start_latlng'].length === 2) {
-            markers.addLayer(L.marker(new L.LatLng(activity['start_latlng'][0], activity['start_latlng'][1]), {
-                title: activity['name'],
-                activity
-            }));
-        }
-    });
-    markers.on('click', e => {
-        const activity = e.layer.options.activity;
-        L.popup(e.latlng, {content: buildDescription(activity), polyline: createPolyline(activity)}).openOn(map)
-    });
-    map.on('popupopen', e => e.popup.options.polyline.addTo(map))
-        .on('popupclose', e => e.popup.options.polyline.remove());
-    map.addLayer(markers);
-    domLoading.style.display = 'none';
+    try {
+        const data = await response.json();
+        document.getElementById('nbActivities').innerText = data.data.currentUser.node.descendants.pageInfo.totalCount;
+        const markers = L.markerClusterGroup({removeOutsideVisibleBounds: false});
+        data.data.currentUser.node.descendants.nodes.forEach(node => {
+            const activity = JSON.parse(node.json.value);
+            if (activity['start_latlng'] && Array.isArray(activity['start_latlng']) && activity['start_latlng'].length === 2) {
+                markers.addLayer(L.marker(new L.LatLng(activity['start_latlng'][0], activity['start_latlng'][1]), {
+                    title: activity['name'],
+                    activity
+                }));
+            }
+        });
+        markers.on('click', e => {
+            const activity = e.layer.options.activity;
+            L.popup(e.latlng, {content: buildDescription(activity), polyline: createPolyline(activity)}).openOn(map)
+        });
+        map.on('popupopen', e => e.popup.options.polyline.addTo(map))
+            .on('popupclose', e => e.popup.options.polyline.remove());
+        map.addLayer(markers);
+        domLoading.style.display = 'none';
+    } catch (error) {
+        displayError(domLoading, domError);
+    }
 };
 
-const syncData = (urlServer, nodeIdentifier, userId) => {
+const displayError = (domLoading, domError) => {
+    domLoading.style.display = 'none';
+    domError.style.display = 'block';
+    setTimeout(() => domError.style.display = 'none', 3000);
+};
+
+const syncData = (urlServer, nodeIdentifier) => {
     const domLoading = document.getElementById(`loading-${nodeIdentifier}`);
+    const domError = document.getElementById(`error-${nodeIdentifier}`);
     const backgroundJobSocket = new WebSocket(`${urlServer.replace('http', 'ws')}/modules/graphqlws`);
     backgroundJobSocket.onopen = () => backgroundJobSocket.send(JSON.stringify({
         type: 'connection_init',
-        payload: {}
-    }));
-    backgroundJobSocket.onmessage = event => {
-        const data = JSON.parse(event.data)
-        if (data.type === 'connection_ack') {
-            backgroundJobSocket.send(JSON.stringify({
-                type: 'start',
-                id: userId,
-                payload: {
-                    query: `subscription {
+        payload: {},
+        query: `subscription {
                         backgroundJobSubscription(
                             targetScheduler: SCHEDULER
                             filterByGroups: ["SyncBackgroundJob"]
@@ -139,16 +144,16 @@ const syncData = (urlServer, nodeIdentifier, userId) => {
                             duration
                         }
                     }`
-                }
-            }));
-        } else if (data.type === 'data') {
-            if (data.payload.data.backgroundJobSubscription?.jobState === 'STARTED') {
-                domLoading.style.display = 'block';
-            } else if (data.payload.data.backgroundJobSubscription?.jobState === 'FINISHED') {
-                location.reload();
-            }
+    }));
+    backgroundJobSocket.onmessage = event => {
+        const data = JSON.parse(event.data)
+        if (data.data?.backgroundJobSubscription?.jobState === 'STARTED') {
+            domLoading.style.display = 'block';
+        } else if (data.data?.backgroundJobSubscription?.jobState === 'FINISHED') {
+            location.reload();
         }
     }
+    backgroundJobSocket.onerror = () => displayError(domLoading, domError);
 };
 
 const syncMe = (e, url) => {

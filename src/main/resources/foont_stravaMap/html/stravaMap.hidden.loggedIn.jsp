@@ -49,14 +49,15 @@
     <template:addResources type="javascript" resources="strava-map.js"/>
     <template:addResources type="css" resources="strava-map.css"/>
     <div id="map-${currentNode.identifier}" class="map">
-        <div id="loading-${currentNode.identifier}" class="ribbon"><fmt:message key="stravaMap.loading"/></div>
+        <div id="loading-${currentNode.identifier}" class="ribbon loading"><fmt:message key="stravaMap.loading"/></div>
+        <div id="error-${currentNode.identifier}" class="ribbon error"><fmt:message key="stravaMap.error"/></div>
     </div>
 
     <template:addResources type="inlinejavascript">
         <script>
             document.addEventListener("DOMContentLoaded", () => {
                 initMap('${currentNode.identifier}');
-                syncData('${url.server}${url.context}', '${currentNode.identifier}', '${userNode.identifier}');
+                syncData('${url.server}${url.context}', '${currentNode.identifier}');
             });
         </script>
     </template:addResources>
