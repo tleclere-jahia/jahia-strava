@@ -33,7 +33,7 @@ const decodePolyline = polyline => {
 };
 
 const initMap = nodeIdentifier => {
-    const map = L.map(`map-${nodeIdentifier}`, {
+    window.stravaMap = L.map(`map-${nodeIdentifier}`, {
         fullscreenControl: true,
         layers: [
             L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -43,10 +43,11 @@ const initMap = nodeIdentifier => {
         ],
         center: [46.966671, -0.21667],
         zoom: 11
-    });
-    navigator.geolocation.getCurrentPosition(location => map.setView(new L.LatLng(location.coords.latitude, location.coords.longitude), 11));
+    }).on('popupopen', e => e.popup.options.polyline.addTo(window.stravaMap)).on('popupclose', e => e.popup.options.polyline.remove());
 
-    loadActivities(map, document.getElementById(`loading-${nodeIdentifier}`), document.getElementById(`error-${nodeIdentifier}`));
+    navigator.geolocation.getCurrentPosition(location => window.stravaMap.setView(new L.LatLng(location.coords.latitude, location.coords.longitude), 11));
+
+    loadActivities(document.getElementById(`loading-${nodeIdentifier}`), document.getElementById(`error-${nodeIdentifier}`), false);
 };
 
 const buildDescription = activity => {
@@ -70,8 +71,8 @@ const createPolyline = activity => {
     return polyline;
 };
 
-const loadActivities = async (map, domLoading, domError) => {
-    domLoading.style.display = 'block';
+const loadActivities = async (domLoading, domError, inBackground) => {
+    if(!inBackground) domLoading.style.display = 'block';
     const response = await fetch('/modules/graphql', {
         method: 'POST',
         body: JSON.stringify({
@@ -109,12 +110,10 @@ const loadActivities = async (map, domLoading, domError) => {
         });
         markers.on('click', e => {
             const activity = e.layer.options.activity;
-            L.popup(e.latlng, {content: buildDescription(activity), polyline: createPolyline(activity)}).openOn(map)
+            L.popup(e.latlng, {content: buildDescription(activity), polyline: createPolyline(activity)}).openOn(window.stravaMap)
         });
-        map.on('popupopen', e => e.popup.options.polyline.addTo(map))
-            .on('popupclose', e => e.popup.options.polyline.remove());
-        map.addLayer(markers);
-        domLoading.style.display = 'none';
+        window.stravaMap.addLayer(markers);
+        if(!inBackground) domLoading.style.display = 'none';
     } catch (error) {
         displayError(domLoading, domError);
     }
@@ -134,26 +133,31 @@ const syncData = (urlServer, nodeIdentifier) => {
         type: 'connection_init',
         payload: {},
         query: `subscription {
-                        backgroundJobSubscription(
-                            targetScheduler: SCHEDULER
-                            filterByGroups: ["SyncBackgroundJob"]
-                        ) {
-                            name
-                            jobStatus
-                            jobState
-                            duration
-                        }
-                    }`
+                  subscribeToStravaSynchronization {
+                    status
+                    message
+                  }
+                }`
     }));
     backgroundJobSocket.onmessage = event => {
         const data = JSON.parse(event.data)
-        if (data.data?.backgroundJobSubscription?.jobState === 'STARTED') {
-            domLoading.style.display = 'block';
-        } else if (data.data?.backgroundJobSubscription?.jobState === 'FINISHED') {
-            location.reload();
+        try {
+            if (data.data.subscribeToStravaSynchronization.status === 'FINISHED') {
+                location.reload();
+            } else {
+                domLoading.style.display = 'block';
+                domLoading.innerText = data.data?.subscribeToStravaSynchronization?.message || '';
+                loadActivities(domLoading, domError, true);
+            }
+        } catch (error) {
+            console.error(error);
+            displayError(domLoading, domError);
         }
     }
-    backgroundJobSocket.onerror = () => displayError(domLoading, domError);
+    backgroundJobSocket.onerror = error => {
+        console.error(error);
+        displayError(domLoading, domError);
+    }
 };
 
 const syncMe = (e, url) => {

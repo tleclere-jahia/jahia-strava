@@ -62,6 +62,7 @@ public class SyncMeAction extends Action {
 
     @Override
     public ActionResult doExecute(HttpServletRequest httpServletRequest, RenderContext renderContext, Resource resource, JCRSessionWrapper jcrSessionWrapper, Map<String, List<String>> parameters, URLResolver urlResolver) {
+        logger.info("Sync me");
         Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
         if (tokenData != null) {
             JobDetail jobDetail = BackgroundJob.createJahiaJob(SyncBackgroundJob.class.getName(), SyncBackgroundJob.class);

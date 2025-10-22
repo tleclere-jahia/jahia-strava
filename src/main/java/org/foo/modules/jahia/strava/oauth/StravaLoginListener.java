@@ -42,8 +42,7 @@ public class StravaLoginListener implements EventHandler {
                             logger.error("User {} not found.", jahiaUser.getLocalPath());
                             return false;
                         }
-                        return SyncBackgroundJob.checkMyStravaProfileActivitiesFolder(jcrUserNode)
-                                && saveTokenData(jcrUserNode, httpServletRequest);
+                        return SyncBackgroundJob.checkMyStravaProfileActivitiesFolder(jcrUserNode) && saveTokenData(jcrUserNode, httpServletRequest);
                     });
                 } catch (RepositoryException e) {
                     logger.error("", e);

@@ -87,10 +87,7 @@ public class StravaClient {
     }
 
     public Optional<List<Activity>> getActivities(String accessToken, LocalDateTime startDate, int page) {
-        StringBuilder url = new StringBuilder(StravaApi20.API)
-                .append("/api/v3/athlete/activities")
-                .append("?");
-//                .append("per_page=2&");
+        StringBuilder url = new StringBuilder(StravaApi20.API).append("/api/v3/athlete/activities").append("?");
         if (startDate != null) {
             url.append("after=").append(startDate.toInstant(ZoneOffset.UTC).toEpochMilli() / 1000).append("&");
         }
