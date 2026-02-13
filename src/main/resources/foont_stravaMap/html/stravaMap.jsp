@@ -19,7 +19,7 @@
 <c:choose>
     <c:when test="${renderContext.loggedIn}"><template:include view="hidden.loggedIn"/></c:when>
     <c:otherwise>
-        <a href="<c:url value="${url.base}${renderContext.mainResource.node.path}.connectToStrava.do"/>"
+        <a href="<c:url value="${url.base}${renderContext.mainResource.node.path}.oidc-connect.do"/>"
            title="${currentNode.properties['jcr:title'].string}">${currentNode.properties['jcr:title'].string}</a>
     </c:otherwise>
 </c:choose>

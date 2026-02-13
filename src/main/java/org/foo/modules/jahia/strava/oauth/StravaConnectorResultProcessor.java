@@ -1,6 +1,7 @@
 package org.foo.modules.jahia.strava.oauth;
 
 import org.apache.commons.lang.StringUtils;
+import org.foo.modules.jahia.strava.StravaApi;
 import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
@@ -37,15 +38,15 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
         if(logger.isDebugEnabled()) {
             logger.debug("OAuth results: {}", results);
         }
-        if (results.containsKey(StravaApi20.SSO_LOGIN_ID)) {
-            String username = (String) results.get(StravaApi20.SSO_LOGIN_ID);
+        if (results.containsKey(StravaApi.SSO_LOGIN_ID)) {
+            String username = (String) results.get(StravaApi.SSO_LOGIN_ID);
             if (username == null) {
                 logger.error("Username {} not found", username);
                 return;
             }
             try {
                 jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.EDIT_WORKSPACE, null, session -> {
-                    JCRUserNode jcrUserNode = jahiaUserManagerService.lookupUser(username, StravaApi20.SITEKEY, session);
+                    JCRUserNode jcrUserNode = jahiaUserManagerService.lookupUser(username, StravaApi.SITEKEY, session);
                     if (jcrUserNode == null) {
                         logger.error("User {} not found", username);
                         return false;
@@ -76,10 +77,10 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
     }
 
     private void setMembership(JCRUserNode jcrUserNode) throws RepositoryException {
-        if (!jcrUserNode.isMemberOfGroup(StravaApi20.SITEKEY, StravaApi20.GROUPNAME)) {
-            JCRGroupNode jcrGroupNode = jahiaGroupManagerService.lookupGroup(StravaApi20.SITEKEY, StravaApi20.GROUPNAME, jcrUserNode.getSession());
+        if (!jcrUserNode.isMemberOfGroup(StravaApi.SITEKEY, StravaApi.GROUPNAME)) {
+            JCRGroupNode jcrGroupNode = jahiaGroupManagerService.lookupGroup(StravaApi.SITEKEY, StravaApi.GROUPNAME, jcrUserNode.getSession());
             if (jcrGroupNode == null) {
-                jcrGroupNode = jahiaGroupManagerService.createGroup(StravaApi20.SITEKEY, StravaApi20.GROUPNAME, null, false, jcrUserNode.getSession());
+                jcrGroupNode = jahiaGroupManagerService.createGroup(StravaApi.SITEKEY, StravaApi.GROUPNAME, null, false, jcrUserNode.getSession());
             }
             jcrGroupNode.addMember(jcrUserNode);
             jcrGroupNode.saveSession();

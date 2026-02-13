@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpHeaders;
-import org.foo.modules.jahia.strava.oauth.StravaApi20;
+import org.foo.modules.jahia.strava.StravaApi;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.jahia.services.notification.HttpClientService;
 import org.osgi.service.component.annotations.Component;
@@ -74,7 +74,7 @@ public class StravaClient {
 
     public Optional<Activity> getActivity(String accessToken, long id) {
         try {
-            String response = httpClientService.executeGet(StravaApi20.API + "/api/v3/activities/" + id + "?include_all_efforts=true", Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
+            String response = httpClientService.executeGet(StravaApi.API + "/api/v3/activities/" + id + "?include_all_efforts=true", Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
             if (response != null) {
                 Optional<Activity> activity = Optional.ofNullable(objectMapper.readValue(response, Activity.class));
                 activity.ifPresent(a -> a.setJson(response));
@@ -87,7 +87,7 @@ public class StravaClient {
     }
 
     public Optional<List<Activity>> getActivities(String accessToken, LocalDateTime startDate, int page) {
-        StringBuilder url = new StringBuilder(StravaApi20.API).append("/api/v3/athlete/activities").append("?");
+        StringBuilder url = new StringBuilder(StravaApi.API).append("/api/v3/athlete/activities").append("?");
         if (startDate != null) {
             url.append("after=").append(startDate.toInstant(ZoneOffset.UTC).toEpochMilli() / 1000).append("&");
         }

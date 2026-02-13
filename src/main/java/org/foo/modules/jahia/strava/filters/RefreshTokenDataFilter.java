@@ -1,7 +1,6 @@
 package org.foo.modules.jahia.strava.filters;
 
 import org.foo.modules.jahia.strava.client.StravaClient;
-import org.foo.modules.jahia.strava.oauth.StravaConnector;
 import org.jahia.modules.jahiaauth.service.ConnectorConfig;
 import org.jahia.modules.jahiaauth.service.SettingsService;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
@@ -11,6 +10,7 @@ import org.jahia.services.render.Resource;
 import org.jahia.services.render.filter.AbstractFilter;
 import org.jahia.services.render.filter.RenderChain;
 import org.jahia.services.render.filter.RenderFilter;
+import org.jahiacommunity.modules.oauth.oidc.OidcConnector;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -32,14 +32,14 @@ public class RefreshTokenDataFilter extends AbstractFilter {
 
     @Override
     public String prepare(RenderContext renderContext, Resource resource, RenderChain chain) throws Exception {
-        ConnectorConfig connectorConfig = settingsService.getConnectorConfig(renderContext.getSite().getSiteKey(), StravaConnector.KEY);
+        ConnectorConfig connectorConfig = settingsService.getConnectorConfig(renderContext.getSite().getSiteKey(), OidcConnector.KEY);
         if (connectorConfig == null) {
             return null;
         }
         Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
         if (tokenData != null && (((int) tokenData.get(StravaClient.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000)) <= StravaClient.TOKEN_MIN_LIFE_IN_SECONDS)) {
             renderContext.getRequest().getSession(false).setAttribute(JahiaOAuthConstants.TOKEN_DATA,
-                    stravaClient.addExpireAtInTokenData(jahiaOAuthService.refreshAccessToken(connectorConfig, (String) tokenData.get(JahiaOAuthConstants.REFRESH_TOKEN))));
+                    StravaClient.addExpireAtInTokenData(jahiaOAuthService.refreshAccessToken(connectorConfig, (String) tokenData.get(JahiaOAuthConstants.REFRESH_TOKEN))));
         }
         return null;
     }

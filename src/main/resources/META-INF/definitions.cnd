@@ -4,12 +4,9 @@
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
 <mix = 'http://www.jcp.org/jcr/mix/1.0'>
 
-[foont:stravaOAuthView] > jnt:content, jmix:authConnectorSettingView
-
 [foont:stravaActivity] > jnt:content, mix:title, jmix:autoPublish, jmix:structuredContent
  - jcr:title (string)
  - date (date) mandatory
  - jsonValue (string) hidden protected mandatory
 
 [foont:stravaMap] > jnt:content, mix:title, jmix:structuredContent
-
