@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.foo.modules.jahia.strava.StravaApi;
@@ -38,7 +37,6 @@ public class StravaClient {
 
     public StravaClient() {
         objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(new SimpleModule()
                 .addDeserializer(PolylineMap.class, new PolylineMapDeserializer(PolylineMap.class))
                 .addDeserializer(LatLng.class, new LatLngDeserializer(LatLng.class)));
