@@ -56,7 +56,7 @@
     <template:addResources type="inlinejavascript">
         <script>
             document.addEventListener("DOMContentLoaded", () => {
-                initMap('${currentNode.identifier}');
+                initMap('${currentNode.identifier}', '${renderContext.mainResourceLocale.language}');
                 syncData('${url.server}${url.context}', '${currentNode.identifier}');
             });
         </script>

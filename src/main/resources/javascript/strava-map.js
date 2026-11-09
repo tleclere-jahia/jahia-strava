@@ -32,30 +32,33 @@ const decodePolyline = polyline => {
     return decoded;
 };
 
-const initMap = nodeIdentifier => {
+const initMap = (nodeIdentifier, locale) => {
     window.stravaMap = L.map(`map-${nodeIdentifier}`, {
         fullscreenControl: true,
         layers: [
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 18
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             })
-        ],
-        center: [46.966671, -0.21667],
-        zoom: 11
+        ]
     }).on('popupopen', e => e.popup.options.polyline.addTo(window.stravaMap)).on('popupclose', e => e.popup.options.polyline.remove());
 
     navigator.geolocation.getCurrentPosition(location => window.stravaMap.setView(new L.LatLng(location.coords.latitude, location.coords.longitude), 11));
 
-    loadActivities(document.getElementById(`loading-${nodeIdentifier}`), document.getElementById(`error-${nodeIdentifier}`), false);
+    loadActivities(null, locale, document.getElementById(`loading-${nodeIdentifier}`), document.getElementById(`error-${nodeIdentifier}`), false, []);
 };
 
-const buildDescription = activity => {
-    return activity['name'] + "<br/>" +
-        activity['start_date'] + "<br/>" +
-        activity['distance'] + "m<br/>" +
-        activity['total_elevation_gain'] + "m<br/>" +
-        activity['moving_time'] + "s";
+const buildDescription = (activity, locale) => {
+    const duration = Temporal.Duration.from(`PT${activity['moving_time']}S`);
+    return `<h4>${activity['name']}</h4>
+    <ul>
+        <li>Date:<span title="${activity['start_date']}">${new Intl.DateTimeFormat(locale, {
+        dateStyle: "full",
+        timeStyle: "long",
+    }).format(Date.parse(activity['start_date']))}</span></li>
+        <li>Distance: ${activity['distance']} m</li>
+        <li>Elevation: ${activity['total_elevation_gain']} m</li>
+        <li>Duration: ${new Intl.DurationFormat(locale, {style: "long"}).format(duration)}</li>
+    </ul>`;
 };
 
 const createPolyline = activity => {
@@ -71,58 +74,76 @@ const createPolyline = activity => {
     return polyline;
 };
 
-const loadActivities = async (domLoading, domError, inBackground) => {
-    if(!inBackground) domLoading.style.display = 'block';
+const loadActivities = async (after, locale, domLoading, domError, inBackground, features) => {
+    if (!inBackground) domLoading.style.display = 'block';
     const response = await fetch('/modules/graphql', {
         method: 'POST',
         body: JSON.stringify({
-            query: `query {
-                        currentUser {
-                            node {
-                                descendants(typesFilter: { types: ["foont:stravaActivity"] }) {
-                                    pageInfo {
-                                        totalCount
-                                    }
-                                    nodes {
-                                        path
-                                        json: property(name: "jsonValue") {
-                                            value
-                                        }
-                                    }
+            query: `query { currentUser {
+                      node {
+                        children(names: ["strava-activities"]) {
+                            nodes {
+                              descendants(
+                                typesFilter: {types: ["foont:stravaActivity"]}
+                                maxDepth: 3
+                                first: 100 ${after ? `after: "${after}"` : ''}
+                              ) {
+                                pageInfo {
+                                  totalCount
+                                  hasNextPage
+                                  endCursor
                                 }
+                                nodes {
+                                  path
+                                  json: property(name: "jsonValue") {
+                                    value
+                                  }
+                                }
+                              }
                             }
+                          }
                         }
-            }`
+                      }
+                    }`
         })
     });
     try {
         const data = await response.json();
-        document.getElementById('nbActivities').innerText = data.data.currentUser.node.descendants.pageInfo.totalCount;
+        const hasNextPage = data.data.currentUser.node.children?.nodes[0].descendants.pageInfo.hasNextPage;
+        document.getElementById('nbActivities').innerText = data.data.currentUser.node.children?.nodes[0].descendants.pageInfo.totalCount;
+        if (hasNextPage) {
+            loadActivities(data.data.currentUser.node.children?.nodes[0].descendants.pageInfo.endCursor, locale, domLoading, domError, inBackground, features);
+        }
         const markers = L.markerClusterGroup({removeOutsideVisibleBounds: false});
-        data.data.currentUser.node.descendants.nodes.forEach(node => {
+        data.data.currentUser.node.children?.nodes[0].descendants.nodes.forEach(node => {
             const activity = JSON.parse(node.json.value);
             if (activity['start_latlng'] && Array.isArray(activity['start_latlng']) && activity['start_latlng'].length === 2) {
-                markers.addLayer(L.marker(new L.LatLng(activity['start_latlng'][0], activity['start_latlng'][1]), {
+                const marker = L.marker(new L.LatLng(activity['start_latlng'][0], activity['start_latlng'][1]), {
                     title: activity['name'],
                     activity
-                }));
+                });
+                features.push(marker);
+                markers.addLayer(marker);
             }
         });
         markers.on('click', e => {
             const activity = e.layer.options.activity;
-            L.popup(e.latlng, {content: buildDescription(activity), polyline: createPolyline(activity)}).openOn(window.stravaMap)
+            const polyline = createPolyline(activity);
+            L.popup(e.latlng, {content: buildDescription(activity, locale), polyline}).openOn(window.stravaMap)
+            window.stravaMap.fitBounds(polyline.getBounds());
         });
         window.stravaMap.addLayer(markers);
-        if(!inBackground) domLoading.style.display = 'none';
+        if (!hasNextPage && !inBackground) domLoading.style.display = 'none';
+        if (!hasNextPage) window.stravaMap.fitBounds(new L.featureGroup(features).getBounds());
     } catch (error) {
-        displayError(domLoading, domError);
+        displayError(domLoading, domError, error);
     }
 };
 
-const displayError = (domLoading, domError) => {
+const displayError = (domLoading, domError, error) => {
+    console.error(error);
     domLoading.style.display = 'none';
     domError.style.display = 'block';
-    setTimeout(() => domError.style.display = 'none', 3000);
 };
 
 const syncData = (urlServer, nodeIdentifier) => {
@@ -147,17 +168,14 @@ const syncData = (urlServer, nodeIdentifier) => {
             } else {
                 domLoading.style.display = 'block';
                 domLoading.innerText = data.data?.subscribeToStravaSynchronization?.message || '';
-                loadActivities(domLoading, domError, true);
+                // TODO: loadActivities(0, domLoading, domError, true);
+                console.log(`backgroundJobSocket message`, event)
             }
         } catch (error) {
-            console.error(error);
-            displayError(domLoading, domError);
+            displayError(domLoading, domError, error);
         }
     }
-    backgroundJobSocket.onerror = error => {
-        console.error(error);
-        displayError(domLoading, domError);
-    }
+    backgroundJobSocket.onerror = error => displayError(domLoading, domError, error);
 };
 
 const syncMe = (e, url) => {

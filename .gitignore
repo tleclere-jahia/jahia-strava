@@ -17,3 +17,9 @@ repository.xml.generated
 # NodeJS
 node_modules
 *.log
+
+# macOS
+.DS_Store
+
+# Local Jahia import dumps (test data, do not commit)
+src/main/import/

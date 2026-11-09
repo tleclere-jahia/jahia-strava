@@ -10,7 +10,7 @@ import java.io.IOException;
 public class LatLngDeserializer extends StdDeserializer<LatLng> {
     private static final long serialVersionUID = 6047989770896980980L;
 
-    protected LatLngDeserializer(Class<?> vc) {
+    public LatLngDeserializer(Class<?> vc) {
         super(vc);
     }
 

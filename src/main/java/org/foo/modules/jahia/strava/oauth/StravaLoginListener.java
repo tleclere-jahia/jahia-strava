@@ -1,12 +1,15 @@
 package org.foo.modules.jahia.strava.oauth;
 
+import org.foo.modules.jahia.strava.StravaApi;
 import org.foo.modules.jahia.strava.actions.SyncBackgroundJob;
 import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
+import org.jahia.api.usermanager.JahiaUserManagerService;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.jahia.params.valves.AuthValveContext;
 import org.jahia.services.content.JCRNodeWrapper;
+import org.jahia.services.content.decorator.JCRUserNode;
 import org.jahia.services.usermanager.JahiaUser;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -25,6 +28,8 @@ public class StravaLoginListener implements EventHandler {
     private static final Logger logger = LoggerFactory.getLogger(StravaLoginListener.class);
 
     @Reference
+    private JahiaUserManagerService jahiaUserManagerService;
+    @Reference
     private JCRTemplate jcrTemplate;
     @Reference
     private StravaClient stravaClient;
@@ -37,7 +42,7 @@ public class StravaLoginListener implements EventHandler {
             if (jahiaUser != null) {
                 try {
                     jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.EDIT_WORKSPACE, null, systemSession -> {
-                        JCRNodeWrapper jcrUserNode = systemSession.getNode(jahiaUser.getLocalPath());
+                        JCRUserNode jcrUserNode = jahiaUserManagerService.lookupUser(jahiaUser.getUsername(), StravaApi.SITEKEY, systemSession);
                         if (jcrUserNode == null) {
                             logger.error("User {} not found.", jahiaUser.getLocalPath());
                             return false;
