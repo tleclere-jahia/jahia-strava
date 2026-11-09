@@ -60,11 +60,17 @@
     <name>jahia-strava</name>
     <description>This is the custom module (jahia-strava) for running on a Jahia server.</description>
     <scm>
-        <connection>scm:git:git@github.com:tleclere-jahia/jahia-training-developer.git</connection>
-        <developerConnection>scm:git:git@github.com:tleclere-jahia/jahia-training-developer.git</developerConnection>
-        <url>https://github.com/tleclere-jahia/jahia-training-developer</url>
+        <connection>scm:git:git@github.com:tleclere-jahia/jahia-strava.git</connection>
+        <developerConnection>scm:git:git@github.com:tleclere-jahia/jahia-strava.git</developerConnection>
+        <url>https://github.com/tleclere-jahia/jahia-strava</url>
     </scm>
     <properties>
+        <!--
+            The React views (foont:stravaMap) live in the companion JavaScript module
+            `jahia-strava-js`, built from the ./javascript directory (yarn build).
+            This bundle keeps the server-side logic: OAuth glue (token storage, refresh,
+            membership), Strava client, sync background job and GraphQL subscription.
+        -->
         <jahia-depends>jahia-authentication,jahia-oauth,jahia-oauth-oidc</jahia-depends>
     </properties>
     <dependencies>

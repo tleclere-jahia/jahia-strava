@@ -1,0 +1,20 @@
+{
+  "stravaMap": {
+    "user": {
+      "hello": "Bonjour {{name}}",
+      "activities": "activités",
+      "lastStravaSync": "Dernière synchronisation",
+      "syncMe": "Synchroniser !",
+      "syncMeDescription": "pour des questions de performance, merci de patienter 15mn entre 2 synchronisations"
+    },
+    "loading": "Chargement ...",
+    "error": "Une erreur est survenue",
+    "editMode": "La carte Strava n'est rendue que sur le site en ligne. Basculez en aperçu ou en ligne pour la voir."
+  },
+  "activity": {
+    "date": "Date",
+    "distance": "Distance",
+    "elevation": "Dénivelé",
+    "duration": "Durée"
+  }
+}
