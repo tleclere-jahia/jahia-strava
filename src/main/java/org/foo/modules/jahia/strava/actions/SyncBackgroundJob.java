@@ -127,7 +127,7 @@ public class SyncBackgroundJob extends BackgroundJob {
                 logger.error("User {} has not activities folder", userNode.getPath());
             } else {
                 String date = StravaApi.LAST_STRAVA_SYNC_FORMATTER.format(activity.getStartDate());
-                StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Sync my activity: " + date);
+                StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Sync my activity: " + date, date);
                 node = node.getNode(StravaApi.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
                 JCRNodeWrapper activityNode = getOrCreateActivityNode(node, activity.getId());
                 activityNode.setProperty(StravaApi.STRAVA_ACTIVITY_DATE, date);

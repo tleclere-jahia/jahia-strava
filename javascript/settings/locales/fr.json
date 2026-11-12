@@ -9,7 +9,8 @@
     },
     "loading": "Chargement ...",
     "error": "Une erreur est survenue",
-    "editMode": "La carte Strava n'est rendue que sur le site en ligne. Basculez en aperçu ou en ligne pour la voir."
+    "editMode": "La carte Strava n'est rendue que sur le site en ligne. Basculez en aperçu ou en ligne pour la voir.",
+    "syncActivity": "Synchronisation de l'activité du {{date}}"
   },
   "activity": {
     "date": "Date",

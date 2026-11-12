@@ -1,8 +1,11 @@
 interface SubscribeOptions {
   /** WebSocket URL of the Jahia GraphQL subscription endpoint (/modules/graphqlws) */
   wsUrl: string;
-  /** Called on every progress message (synchronization running) */
-  onMessage: (message: string) => void;
+  /**
+   * Called on every progress message (synchronization running), with the start date (ISO-8601)
+   * of the activity being synchronized, if any
+   */
+  onMessage: (message: string, date?: string) => void;
   /** Called when the synchronization finished: the page needs a refresh */
   onFinished: () => void;
   onError: (error: unknown) => void;
@@ -30,6 +33,7 @@ export const subscribeToSynchronization = ({
           subscribeToStravaSynchronization {
             status
             message
+            date
           }
         }`,
       }),
@@ -43,7 +47,7 @@ export const subscribeToSynchronization = ({
       if (synchronization.status === "FINISHED") {
         onFinished();
       } else {
-        onMessage(synchronization.message ?? "");
+        onMessage(synchronization.message ?? "", synchronization.date ?? undefined);
       }
     } catch (error) {
       onError(error);

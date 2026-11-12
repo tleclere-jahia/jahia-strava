@@ -88,10 +88,19 @@ export default function StravaMapClient({
         // Live synchronization status through the Jahia GraphQL websocket
         closeSocket = subscribeToSynchronization({
           wsUrl,
-          onMessage: (message) => {
+          onMessage: (message, date) => {
             if (!disposed) {
               setPhase("loading");
-              setLoadingMessage(message);
+              setLoadingMessage(
+                date
+                  ? t("stravaMap.syncActivity", {
+                      date: new Intl.DateTimeFormat(language, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(Date.parse(date)),
+                    })
+                  : message,
+              );
             }
           },
           onFinished: () => window.location.reload(),
