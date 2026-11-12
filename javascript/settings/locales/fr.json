@@ -5,7 +5,9 @@
       "activities": "activités",
       "lastStravaSync": "Dernière synchronisation",
       "syncMe": "Synchroniser !",
-      "syncMeDescription": "pour des questions de performance, merci de patienter 15mn entre 2 synchronisations"
+      "syncMeDescription": "pour des questions de performance, merci de patienter 15mn entre 2 synchronisations",
+      "pending_one": "{{count}} activité à synchroniser",
+      "pending_other": "{{count}} activités à synchroniser"
     },
     "loading": "Chargement ...",
     "error": "Une erreur est survenue",

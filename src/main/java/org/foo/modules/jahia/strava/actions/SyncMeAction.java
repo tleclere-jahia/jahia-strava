@@ -8,15 +8,12 @@ import org.jahia.services.content.JCRSessionWrapper;
 import org.jahia.services.render.RenderContext;
 import org.jahia.services.render.Resource;
 import org.jahia.services.render.URLResolver;
-import org.jahia.services.scheduler.BackgroundJob;
 import org.jahia.services.scheduler.SchedulerService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
-import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
 import org.quartz.SchedulerException;
-import org.quartz.SimpleTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,14 +62,8 @@ public class SyncMeAction extends Action {
         logger.info("Sync me");
         Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
         if (tokenData != null) {
-            JobDetail jobDetail = BackgroundJob.createJahiaJob(SyncBackgroundJob.class.getName(), SyncBackgroundJob.class);
-            JobDataMap jobDataMap = new JobDataMap();
-            jobDataMap.put(BackgroundJob.JOB_USERKEY, jcrSessionWrapper.getUser().getLocalPath());
-            jobDataMap.put(JahiaOAuthConstants.ACCESS_TOKEN, (String) tokenData.get(JahiaOAuthConstants.ACCESS_TOKEN));
-            jobDetail.setJobDataMap(jobDataMap);
             try {
-                schedulerService.getScheduler().scheduleJob(jobDetail, new SimpleTrigger(SyncBackgroundJob.class.getSimpleName() + "_trigger", jobDetail.getGroup()));
-                jobDetails.add(jobDetail);
+                jobDetails.add(SyncBackgroundJob.schedule(schedulerService, jcrSessionWrapper.getUser().getLocalPath(), (String) tokenData.get(JahiaOAuthConstants.ACCESS_TOKEN)));
                 return ActionResult.OK_JSON;
             } catch (SchedulerException e) {
                 logger.error("", e);

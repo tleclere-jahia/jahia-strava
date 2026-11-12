@@ -85,12 +85,16 @@ public class StravaClient {
         return Optional.empty();
     }
 
-    public Optional<List<Activity>> getActivities(String accessToken, LocalDateTime startDate, int page) {
+    /**
+     * One page of the activity summaries of the athlete, started after startDate. With after,
+     * Strava returns the oldest first.
+     */
+    public Optional<List<Activity>> getActivities(String accessToken, LocalDateTime startDate, int page, int perPage) {
         StringBuilder url = new StringBuilder(StravaApi.API).append("/api/v3/athlete/activities").append("?");
         if (startDate != null) {
             url.append("after=").append(startDate.toInstant(ZoneOffset.UTC).toEpochMilli() / 1000).append("&");
         }
-        url.append("page=").append(page);
+        url.append("page=").append(page).append("&per_page=").append(perPage);
         try {
             String response = httpClientService.executeGet(url.toString(), Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
             if (response != null) {

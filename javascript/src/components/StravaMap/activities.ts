@@ -61,6 +61,20 @@ query Activity($path: String!) {
   }
 }`;
 
+/**
+ * The number of Strava activities after the last synchronization that are not synchronized yet,
+ * or null when unknown (no Strava session, or Strava refused the request)
+ */
+export const loadPendingCount = async (gqlUrl: string): Promise<number | null> => {
+  const response = await fetch(gqlUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: "{ stravaPendingActivities }" }),
+  });
+  const data = await response.json();
+  return data.data?.stravaPendingActivities ?? null;
+};
+
 /** Load one activity, such as the one the synchronization just saved */
 export const loadActivity = async (gqlUrl: string, path: string): Promise<Activity> => {
   const response = await fetch(gqlUrl, {

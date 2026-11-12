@@ -10,12 +10,14 @@ import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.jahia.params.valves.AuthValveContext;
 import org.jahia.services.content.JCRNodeWrapper;
 import org.jahia.services.content.decorator.JCRUserNode;
+import org.jahia.services.scheduler.SchedulerService;
 import org.jahia.services.usermanager.JahiaUser;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
+import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +35,8 @@ public class StravaLoginListener implements EventHandler {
     private JCRTemplate jcrTemplate;
     @Reference
     private StravaClient stravaClient;
+    @Reference
+    private SchedulerService schedulerService;
 
     @Override
     public void handleEvent(Event event) {
@@ -41,7 +45,7 @@ public class StravaLoginListener implements EventHandler {
             JahiaUser jahiaUser = (JahiaUser) event.getProperty("user");
             if (jahiaUser != null) {
                 try {
-                    jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.EDIT_WORKSPACE, null, systemSession -> {
+                    Boolean stravaLogin = jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.EDIT_WORKSPACE, null, systemSession -> {
                         JCRUserNode jcrUserNode = jahiaUserManagerService.lookupUser(jahiaUser.getUsername(), StravaApi.SITEKEY, systemSession);
                         if (jcrUserNode == null) {
                             logger.error("User {} not found.", jahiaUser.getLocalPath());
@@ -49,10 +53,30 @@ public class StravaLoginListener implements EventHandler {
                         }
                         return SyncBackgroundJob.checkMyStravaProfileActivitiesFolder(jcrUserNode) && saveTokenData(jcrUserNode, httpServletRequest);
                     });
+                    if (Boolean.TRUE.equals(stravaLogin)) {
+                        synchronizeInBackground(jahiaUser, httpServletRequest);
+                    }
                 } catch (RepositoryException e) {
                     logger.error("", e);
                 }
             }
+        }
+    }
+
+    /**
+     * A Strava login starts a synchronization in the background, so that the login does not wait
+     * for Strava. The job first checks which activities after LAST_STRAVA_SYNC are missing, and
+     * saves nothing when none is.
+     */
+    private void synchronizeInBackground(JahiaUser jahiaUser, HttpServletRequest httpServletRequest) {
+        Map<String, Object> tokenData = (Map<String, Object>) httpServletRequest.getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
+        if (tokenData == null) {
+            return;
+        }
+        try {
+            SyncBackgroundJob.schedule(schedulerService, jahiaUser.getLocalPath(), (String) tokenData.get(JahiaOAuthConstants.ACCESS_TOKEN));
+        } catch (SchedulerException e) {
+            logger.error("Cannot schedule the synchronization of {}", jahiaUser.getLocalPath(), e);
         }
     }
 

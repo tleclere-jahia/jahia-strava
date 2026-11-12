@@ -5,7 +5,7 @@ import "leaflet.fullscreen/dist/Control.FullScreen.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { StravaMapHandle } from "./map";
-import { loadActivity, loadAllActivities } from "./activities";
+import { loadActivity, loadAllActivities, loadPendingCount } from "./activities";
 import { subscribeToSynchronization } from "./sync";
 import classes from "./styles.module.css";
 
@@ -37,6 +37,7 @@ export default function StravaMapClient({
   const [phase, setPhase] = useState<Phase>("loading");
   const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
+  const [pending, setPending] = useState<number | null>(null);
 
   const mapRef = useRef<StravaMapHandle>(undefined);
 
@@ -96,6 +97,13 @@ export default function StravaMapClient({
             if (!disposed) setPhase("ready");
           })
           .catch(displayError);
+
+        // Strava activities after the last synchronization that the map does not hold yet
+        loadPendingCount(gqlUrl)
+          .then((count) => {
+            if (!disposed) setPending(count);
+          })
+          .catch((error) => console.warn("Cannot count the pending activities", error));
 
         // Live synchronization status through the Jahia GraphQL websocket: each activity the job
         // saves joins the map, its clusters and the count as it arrives
@@ -179,6 +187,12 @@ export default function StravaMapClient({
           {t("stravaMap.user.syncMe")}
         </a>
         )
+        {pending ? (
+          <span className={classes.pending}>
+            {" · "}
+            {t("stravaMap.user.pending", { count: pending })}
+          </span>
+        ) : null}
       </p>
       <p className={classes.syncDescription}>{t("stravaMap.user.syncMeDescription")}</p>
       <div ref={containerRef} className={classes.map}>
