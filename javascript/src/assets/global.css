@@ -1,9 +1,0 @@
-/*
- * Global styles for the jahia-strava-js module.
- * Leaflet and marker cluster styles are imported by the client bundle
- * (see components/StravaMap/map.ts); this file only carries the module's own rules.
- */
-
-:root {
-  --strava-purple: #9900cc;
-}
