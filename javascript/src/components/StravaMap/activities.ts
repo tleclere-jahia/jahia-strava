@@ -1,8 +1,9 @@
-import type { Activity, StravaMapHandle } from "./map";
+import type { Activity, PopupLabels, StravaMapHandle } from "./map";
 
 interface LoadAllActivitiesOptions {
   gqlUrl: string;
   language: string;
+  labels: PopupLabels;
   map: StravaMapHandle;
   onTotalCount: (count: number) => void;
 }
@@ -56,6 +57,7 @@ query Activities($after: String) {
 export const loadAllActivities = async ({
   gqlUrl,
   language,
+  labels,
   map,
   onTotalCount,
 }: LoadAllActivitiesOptions): Promise<void> => {
@@ -93,6 +95,6 @@ export const loadAllActivities = async ({
     after = page.pageInfo.endCursor;
   }
 
-  map.addActivities(activities, language);
+  map.addActivities(activities, language, labels);
   map.fitToActivities();
 };

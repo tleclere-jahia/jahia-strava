@@ -68,6 +68,13 @@ export default function StravaMapClient({
         loadAllActivities({
           gqlUrl,
           language,
+          labels: {
+            date: t("activity.date"),
+            distance: t("activity.distance"),
+            elevation: t("activity.elevation"),
+            duration: t("activity.duration"),
+            viewOnStrava: t("activity.viewOnStrava"),
+          },
           map: created,
           onTotalCount: (count) => {
             if (nbActivitiesRef.current) nbActivitiesRef.current.innerText = String(count);
@@ -99,7 +106,7 @@ export default function StravaMapClient({
       map?.remove();
       mapRef.current = undefined;
     };
-  }, [gqlUrl, wsUrl, language, displayError]);
+  }, [gqlUrl, wsUrl, language, displayError, t]);
 
   const ribbonClasses = useMemo(
     () => `${classes.ribbon} ${phase === "loading" ? classes.loading : classes.error}`,

@@ -3,6 +3,7 @@
 import L from "leaflet";
 import "leaflet.fullscreen";
 import "leaflet.markercluster";
+import classes from "./styles.module.css";
 
 /**
  * Decode an encoded polyline string (Google polyline algorithm, as returned by Strava)
@@ -38,7 +39,9 @@ export const decodePolyline = (polyline: string): [number, number][] => {
 };
 
 export interface Activity {
+  id: number;
   name: string;
+  sport_type?: string;
   start_date: string;
   distance: number;
   total_elevation_gain: number;
@@ -47,55 +50,115 @@ export interface Activity {
   map?: { polyline?: string };
 }
 
+/** Translated labels of the activity popup */
+export interface PopupLabels {
+  date: string;
+  distance: string;
+  elevation: string;
+  duration: string;
+  viewOnStrava: string;
+}
+
 export interface StravaMapHandle {
   map: L.Map;
-  addActivities: (activities: Activity[], language: string) => void;
+  addActivities: (activities: Activity[], language: string, labels: PopupLabels) => void;
   fitToActivities: () => void;
   setView: (center: [number, number], zoom: number) => void;
   remove: () => void;
 }
 
+const STRAVA_PURPLE = "#9900cc";
+
+/** Pictogram and color of the marker, by Strava sport type */
+const SPORTS: Record<string, { emoji: string; color: string }> = {
+  Ride: { emoji: "🚴", color: STRAVA_PURPLE },
+  GravelRide: { emoji: "🚴", color: "#a0522d" },
+  MountainBikeRide: { emoji: "🚵", color: "#2e7d32" },
+  VirtualRide: { emoji: "🚴", color: "#546e7a" },
+  EBikeRide: { emoji: "🚴", color: "#00838f" },
+  Run: { emoji: "🏃", color: "#fc4c02" },
+  TrailRun: { emoji: "🏃", color: "#e65100" },
+  Walk: { emoji: "🚶", color: "#6d4c41" },
+  Hike: { emoji: "🥾", color: "#6d4c41" },
+  Swim: { emoji: "🏊", color: "#0277bd" },
+};
+const DEFAULT_SPORT = { emoji: "📍", color: STRAVA_PURPLE };
+
+const markerIcon = (activity: Activity): L.DivIcon => {
+  const sport = SPORTS[activity.sport_type ?? ""] ?? DEFAULT_SPORT;
+  return L.divIcon({
+    className: classes.marker,
+    html: `<span class="${classes.markerPin}" style="--sport-color: ${sport.color}"><span>${sport.emoji}</span></span>`,
+    iconSize: [32, 32],
+    // the pin is a square rotated by 45°: its tip sits 16√2 px below its center
+    iconAnchor: [16, 39],
+    popupAnchor: [0, -36],
+  });
+};
+
 /**
- * Format the description shown in the marker popup, locale-aware.
- * `Intl.DurationFormat` is available in modern browsers; a plain fallback is used otherwise.
+ * Hours and minutes of a duration, locale-aware. `Intl.DurationFormat` is available in modern
+ * browsers; a plain fallback is used otherwise.
  */
 const formatDuration = (seconds: number, language: string): string => {
-  const duration = {
-    days: Math.floor(seconds / 86400) || undefined,
-    hours: Math.floor((seconds % 86400) / 3600) || undefined,
-    minutes: Math.floor((seconds % 3600) / 60) || undefined,
-    seconds: seconds % 60 || undefined,
-  };
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
   const IntlWithDurationFormat = Intl as unknown as {
     DurationFormat?: new (
       locale: string,
       options?: { style?: string },
     ) => {
-      format: (duration: Record<string, number | undefined>) => string;
+      format: (duration: Record<string, number>) => string;
     };
   };
   if (IntlWithDurationFormat.DurationFormat) {
-    return new IntlWithDurationFormat.DurationFormat(language, { style: "long" }).format(duration);
+    return new IntlWithDurationFormat.DurationFormat(language, { style: "short" }).format(
+      hours ? { hours, minutes } : { minutes },
+    );
   }
-  // Minimal fallback if Intl.DurationFormat is not available
-  return Object.entries(duration)
-    .filter(([, value]) => value)
-    .map(([unit, value]) => `${value} ${unit}`)
-    .join(" ");
+  return hours ? `${hours} h ${String(minutes).padStart(2, "0")}` : `${minutes} min`;
 };
 
-const buildDescription = (activity: Activity, language: string): string => {
-  const formattedDate = new Intl.DateTimeFormat(language, {
-    dateStyle: "full",
-    timeStyle: "long",
-  }).format(Date.parse(activity.start_date));
-  return `<h4>${activity.name}</h4>
-    <ul>
-        <li>Date: <span title="${activity.start_date}">${formattedDate}</span></li>
-        <li>Distance: ${activity.distance} m</li>
-        <li>Elevation: ${activity.total_elevation_gain} m</li>
-        <li>Duration: ${formatDuration(activity.moving_time, language)}</li>
-    </ul>`;
+const element = <K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  text?: string,
+): HTMLElementTagNameMap[K] => {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+
+/** The popup of an activity, built as DOM nodes so that its name is never read as HTML */
+const buildPopup = (activity: Activity, language: string, labels: PopupLabels): HTMLElement => {
+  const number = (value: number, unit: string, maximumFractionDigits: number) =>
+    new Intl.NumberFormat(language, { style: "unit", unit, maximumFractionDigits }).format(value);
+  const stats: [string, string][] = [
+    [
+      labels.date,
+      new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" }).format(
+        Date.parse(activity.start_date),
+      ),
+    ],
+    [labels.distance, number(activity.distance / 1000, "kilometer", 1)],
+    [labels.elevation, number(activity.total_elevation_gain, "meter", 0)],
+    [labels.duration, formatDuration(activity.moving_time, language)],
+  ];
+
+  const popup = element("div", classes.popup);
+  popup.append(element("div", classes.popupTitle, activity.name));
+  const list = element("dl", classes.popupStats);
+  for (const [label, value] of stats) {
+    list.append(element("dt", "", label), element("dd", "", value));
+  }
+  popup.append(list);
+  const link = element("a", classes.popupLink, labels.viewOnStrava);
+  link.href = `https://www.strava.com/activities/${activity.id}`;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  popup.append(link);
+  return popup;
 };
 
 /**
@@ -109,11 +172,11 @@ export const createMap = (container: HTMLElement): StravaMapHandle => {
     fullscreenControl: true,
   })
     .on("popupopen", (e) => {
-      const polyline = (e.popup.options as { polyline?: L.Polyline }).polyline;
+      const polyline = (e.popup as L.Popup & { polyline?: L.Polyline }).polyline;
       polyline?.addTo(map);
     })
     .on("popupclose", (e) => {
-      const polyline = (e.popup.options as { polyline?: L.Polyline }).polyline;
+      const polyline = (e.popup as L.Popup & { polyline?: L.Polyline }).polyline;
       polyline?.remove();
     });
 
@@ -122,16 +185,17 @@ export const createMap = (container: HTMLElement): StravaMapHandle => {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
-  const addActivities = (activities: Activity[], language: string) => {
+  const addActivities = (activities: Activity[], language: string, labels: PopupLabels) => {
     const markers = L.markerClusterGroup({ removeOutsideVisibleBounds: false });
     for (const activity of activities) {
       if (activity.start_latlng?.length === 2) {
         const marker = L.marker(L.latLng(activity.start_latlng[0], activity.start_latlng[1]), {
           title: activity.name,
+          icon: markerIcon(activity),
         });
         marker.on("click", (e) => {
           const polyline = L.polyline(decodePolyline(activity.map?.polyline ?? ""), {
-            color: "#9900CC",
+            color: STRAVA_PURPLE,
             weight: 2,
             opacity: 0.7,
             lineJoin: "round",
@@ -141,10 +205,12 @@ export const createMap = (container: HTMLElement): StravaMapHandle => {
             ev.target.setStyle({ color: "red", weight: 5, opacity: 1 }),
           );
           polyline.on("mouseout", (ev) =>
-            ev.target.setStyle({ color: "#9900CC", weight: 2, opacity: 0.7 }),
+            ev.target.setStyle({ color: STRAVA_PURPLE, weight: 2, opacity: 0.7 }),
           );
           const popup = L.popup(e.latlng, {
-            content: buildDescription(activity, language),
+            content: buildPopup(activity, language, labels),
+            minWidth: 220,
+            maxWidth: 300,
           }) as L.Popup & { polyline?: L.Polyline };
           popup.polyline = polyline;
           popup.openOn(map);

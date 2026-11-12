@@ -15,6 +15,7 @@
     "date": "Date",
     "distance": "Distance",
     "elevation": "Elevation",
-    "duration": "Duration"
+    "duration": "Duration",
+    "viewOnStrava": "View on Strava"
   }
 }
