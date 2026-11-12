@@ -1,10 +1,8 @@
+// Leaflet reads `window` when it loads: import this file only from the browser, with a dynamic
+// import(). Its stylesheets are imported by StravaMap.client.tsx.
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import "leaflet.fullscreen";
-import "leaflet.fullscreen/dist/Control.FullScreen.css";
 import "leaflet.markercluster";
-import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 /**
  * Decode an encoded polyline string (Google polyline algorithm, as returned by Strava)

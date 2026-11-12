@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createMap } from "./map";
+import "leaflet/dist/leaflet.css";
+import "leaflet.fullscreen/dist/Control.FullScreen.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import type { StravaMapHandle } from "./map";
 import { loadAllActivities } from "./activities";
 import { subscribeToSynchronization } from "./sync";
 import classes from "./styles.module.css";
@@ -30,7 +34,7 @@ export default function StravaMapClient({
   const [phase, setPhase] = useState<Phase>("loading");
   const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
 
-  const mapRef = useRef<ReturnType<typeof createMap>>(undefined);
+  const mapRef = useRef<StravaMapHandle>(undefined);
 
   const displayError = useCallback((error: unknown) => {
     console.error(error);
@@ -41,47 +45,58 @@ export default function StravaMapClient({
     const container = containerRef.current;
     if (!container) return;
 
-    // Leaflet is imperative: create the map once, on the client only
-    mapRef.current = createMap(container);
-    const map = mapRef.current;
-
     let disposed = false;
+    let closeSocket: (() => void) | undefined;
+    let map: StravaMapHandle | undefined;
 
-    // Center the map on the visitor's location
-    navigator.geolocation.getCurrentPosition((location) =>
-      map.setView([location.coords.latitude, location.coords.longitude], 11),
-    );
+    // Leaflet reads `window` as soon as it loads, so it is loaded here, in the browser only:
+    // a static import would run it on the server (GraalVM) when the module starts.
+    import("./map")
+      .then(({ createMap }) => {
+        if (disposed) return;
 
-    loadAllActivities({
-      gqlUrl,
-      language,
-      map,
-      onTotalCount: (count) => {
-        if (nbActivitiesRef.current) nbActivitiesRef.current.innerText = String(count);
-      },
-    })
-      .then(() => {
-        if (!disposed) setPhase("ready");
+        // Leaflet is imperative: create the map once
+        const created = createMap(container);
+        map = created;
+        mapRef.current = created;
+
+        // Center the map on the visitor's location
+        navigator.geolocation.getCurrentPosition((location) =>
+          created.setView([location.coords.latitude, location.coords.longitude], 11),
+        );
+
+        loadAllActivities({
+          gqlUrl,
+          language,
+          map: created,
+          onTotalCount: (count) => {
+            if (nbActivitiesRef.current) nbActivitiesRef.current.innerText = String(count);
+          },
+        })
+          .then(() => {
+            if (!disposed) setPhase("ready");
+          })
+          .catch(displayError);
+
+        // Live synchronization status through the Jahia GraphQL websocket
+        closeSocket = subscribeToSynchronization({
+          wsUrl,
+          onMessage: (message) => {
+            if (!disposed) {
+              setPhase("loading");
+              setLoadingMessage(message);
+            }
+          },
+          onFinished: () => window.location.reload(),
+          onError: displayError,
+        });
       })
       .catch(displayError);
 
-    // Live synchronization status through the Jahia GraphQL websocket
-    const closeSocket = subscribeToSynchronization({
-      wsUrl,
-      onMessage: (message) => {
-        if (!disposed) {
-          setPhase("loading");
-          setLoadingMessage(message);
-        }
-      },
-      onFinished: () => window.location.reload(),
-      onError: displayError,
-    });
-
     return () => {
       disposed = true;
-      closeSocket();
-      map.remove();
+      closeSocket?.();
+      map?.remove();
       mapRef.current = undefined;
     };
   }, [gqlUrl, wsUrl, language, displayError]);
