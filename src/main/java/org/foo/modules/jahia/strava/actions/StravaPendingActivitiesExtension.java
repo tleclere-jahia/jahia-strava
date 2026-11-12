@@ -30,6 +30,13 @@ public class StravaPendingActivitiesExtension {
     }
 
     @GraphQLField
+    @GraphQLDescription("Seconds before the pending Strava activities are counted again, once Strava refused a request; null when there is no wait")
+    public static Integer stravaRetryAfter() {
+        long seconds = PendingActivities.retryAfterSeconds();
+        return seconds > 0 ? (int) seconds : null;
+    }
+
+    @GraphQLField
     @GraphQLDescription("Number of the Strava activities of the current user after the last synchronization that are not synchronized yet; null without a Strava session or when Strava refused the request")
     public static Integer stravaPendingActivities(DataFetchingEnvironment environment) {
         HttpServletRequest request = ContextUtil.getHttpServletRequest(environment.getGraphQlContext());

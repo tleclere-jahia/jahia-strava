@@ -38,6 +38,22 @@ export default function StravaMapClient({
   const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [pending, setPending] = useState<number | null>(null);
+  // time until which Strava refuses requests (rate limit), and the clock that counts it down
+  const [retryUntil, setRetryUntil] = useState<number | undefined>(undefined);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!retryUntil) return;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= retryUntil) setRetryUntil(undefined);
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [retryUntil]);
+
+  const retryMinutes =
+    retryUntil && retryUntil > now ? Math.ceil((retryUntil - now) / 60_000) : undefined;
 
   const mapRef = useRef<StravaMapHandle>(undefined);
 
@@ -100,8 +116,13 @@ export default function StravaMapClient({
 
         // Strava activities after the last synchronization that the map does not hold yet
         loadPendingCount(gqlUrl)
-          .then((count) => {
-            if (!disposed) setPending(count);
+          .then(({ count, retryAfter }) => {
+            if (disposed) return;
+            setPending(count);
+            if (retryAfter) {
+              setNow(Date.now());
+              setRetryUntil(Date.now() + retryAfter * 1000);
+            }
           })
           .catch((error) => console.warn("Cannot count the pending activities", error));
 
@@ -183,9 +204,16 @@ export default function StravaMapClient({
     <>
       <p>
         <span ref={nbActivitiesRef} id="nbActivities" /> {t("stravaMap.user.activities")} (
-        <a href="#" onClick={syncMe}>
-          {t("stravaMap.user.syncMe")}
-        </a>
+        {retryMinutes ? (
+          // Strava would refuse a synchronization now: nothing to click
+          <span className={classes.syncDisabled} aria-disabled="true">
+            {t("stravaMap.user.syncMe")}
+          </span>
+        ) : (
+          <a href="#" onClick={syncMe}>
+            {t("stravaMap.user.syncMe")}
+          </a>
+        )}
         )
         {pending ? (
           <span className={classes.pending}>
@@ -194,10 +222,23 @@ export default function StravaMapClient({
           </span>
         ) : null}
       </p>
-      <p className={classes.syncDescription}>{t("stravaMap.user.syncMeDescription")}</p>
+      <p
+        className={`${classes.syncDescription} ${retryMinutes ? classes.syncBlocked : ""}`}
+        role={retryMinutes ? "alert" : undefined}
+      >
+        {retryMinutes
+          ? t("stravaMap.rateLimited", { minutes: retryMinutes })
+          : t("stravaMap.user.syncMeDescription")}
+      </p>
       <div ref={containerRef} className={classes.map}>
         <div className={ribbonClasses} style={{ display: phase === "loading" ? "block" : "none" }}>
           {loadingMessage ?? t("stravaMap.loading")}
+        </div>
+        <div
+          className={`${classes.ribbon} ${classes.warning}`}
+          style={{ display: phase === "ready" && retryMinutes ? "block" : "none" }}
+        >
+          {retryMinutes ? t("stravaMap.rateLimited", { minutes: retryMinutes }) : null}
         </div>
         <div
           className={`${classes.ribbon} ${classes.error}`}

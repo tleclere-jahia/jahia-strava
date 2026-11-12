@@ -26,6 +26,8 @@ import java.util.Set;
 @Component(service = Action.class)
 public class SyncMeAction extends Action {
     private static final Logger logger = LoggerFactory.getLogger(SyncMeAction.class);
+    /** HttpServletResponse of the Servlet API in use names no constant for 429 */
+    private static final int SC_TOO_MANY_REQUESTS = 429;
 
     @Reference
     private SchedulerService schedulerService;
@@ -60,6 +62,11 @@ public class SyncMeAction extends Action {
     @Override
     public ActionResult doExecute(HttpServletRequest httpServletRequest, RenderContext renderContext, Resource resource, JCRSessionWrapper jcrSessionWrapper, Map<String, List<String>> parameters, URLResolver urlResolver) {
         logger.info("Sync me");
+        if (PendingActivities.retryAfterSeconds() > 0) {
+            // Strava refused a request less than 15 minutes ago: a new synchronization would be refused too
+            logger.info("Sync me refused: Strava rate limit, retry in {}s", PendingActivities.retryAfterSeconds());
+            return new ActionResult(SC_TOO_MANY_REQUESTS);
+        }
         Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
         if (tokenData != null) {
             try {

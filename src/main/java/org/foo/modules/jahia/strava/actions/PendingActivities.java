@@ -92,6 +92,11 @@ public final class PendingActivities {
         return find(stravaClient, userNode, accessToken).map(List::size).orElse(null);
     }
 
+    /** The seconds left before the count asks Strava again, after a refusal; 0 when it may */
+    public static long retryAfterSeconds() {
+        return Math.max(0, refusedUntil - System.currentTimeMillis()) / 1000;
+    }
+
     /** Forget the cached count of a user, once a synchronization saved activities */
     public static void forget(String userPath) {
         counts.remove(userPath);

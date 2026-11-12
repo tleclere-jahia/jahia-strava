@@ -29,6 +29,24 @@
   content: "⚠️";
 }
 
+/* Strava refuses requests for a while (rate limit): relaunching is useless until then */
+.syncBlocked {
+  border-left-color: #d32f2f;
+  background: #fdecea;
+  color: #7f1d1d;
+  font-weight: 600;
+}
+
+.syncBlocked::before {
+  content: "⛔";
+}
+
+.syncDisabled {
+  color: #999;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
 .map {
   height: 580px;
   position: relative;
@@ -136,6 +154,11 @@
 
 .error {
   background: #ff0055;
+}
+
+.warning {
+  background: #e65100;
+  font-size: 1.1rem;
 }
 
 .editModeNotice {

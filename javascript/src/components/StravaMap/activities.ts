@@ -67,14 +67,20 @@ query Activity($path: String!) {
  * The number of Strava activities after the last synchronization that are not synchronized yet,
  * or null when unknown (no Strava session, or Strava refused the request)
  */
-export const loadPendingCount = async (gqlUrl: string): Promise<number | null> => {
+export const loadPendingCount = async (
+  gqlUrl: string,
+): Promise<{ count: number | null; retryAfter: number | null }> => {
   const response = await fetch(gqlUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: "{ stravaPendingActivities }" }),
+    // stravaRetryAfter comes second: a refusal while counting starts the wait it reports
+    body: JSON.stringify({ query: "{ stravaPendingActivities stravaRetryAfter }" }),
   });
   const data = await response.json();
-  return data.data?.stravaPendingActivities ?? null;
+  return {
+    count: data.data?.stravaPendingActivities ?? null,
+    retryAfter: data.data?.stravaRetryAfter ?? null,
+  };
 };
 
 const ACTIVITY_ATTEMPTS = 4;
