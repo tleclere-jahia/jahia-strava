@@ -2,6 +2,7 @@ package org.foo.modules.jahia.strava.oauth;
 
 import org.apache.commons.lang.StringUtils;
 import org.foo.modules.jahia.strava.StravaApi;
+import org.foo.modules.jahia.strava.client.Athlete;
 import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
@@ -19,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
 import java.util.Map;
+import java.util.Optional;
 
 @Component(service = ConnectorResultProcessor.class, immediate = true)
 public class StravaConnectorResultProcessor implements ConnectorResultProcessor {
@@ -54,6 +56,7 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
                     try {
                         saveTokenData(jcrUserNode, results);
                         setMembership(jcrUserNode);
+                        setStravaProfile(jcrUserNode, results);
                         return true;
                     } catch (RepositoryException e) {
                         logger.error("", e);
@@ -74,6 +77,32 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
                 jcrUserNode.saveSession();
             }
         }
+    }
+
+    /**
+     * Fills stravaUrl from the athlete who owns the token, so that a user who cannot edit their
+     * profile still gets their map: StravaProfileListener creates it once stravaUrl is saved. The
+     * connector maps only the profile fields its mappings name, so the athlete id is read from Strava.
+     */
+    private void setStravaProfile(JCRUserNode jcrUserNode, Map<String, Object> results) throws RepositoryException {
+        Map<String, Object> tokenData = (Map<String, Object>) results.get(JahiaOAuthConstants.TOKEN_DATA);
+        String accessToken = tokenData != null ? (String) tokenData.get(JahiaOAuthConstants.ACCESS_TOKEN) : null;
+        if (StringUtils.isBlank(accessToken)) {
+            return;
+        }
+        Optional<Athlete> athlete = stravaClient.getAthlete(accessToken);
+        if (!athlete.isPresent()) {
+            logger.warn("Cannot read the Strava athlete of {}: stravaUrl stays as it is", jcrUserNode.getName());
+            return;
+        }
+        String stravaUrl = StravaApi.STRAVA_ATHLETE_URL + athlete.get().getId();
+        if (!jcrUserNode.isNodeType(StravaApi.STRAVA_PROFILE)) {
+            jcrUserNode.addMixin(StravaApi.STRAVA_PROFILE);
+        } else if (stravaUrl.equals(jcrUserNode.getPropertyAsString(StravaApi.STRAVA_URL))) {
+            return;
+        }
+        jcrUserNode.setProperty(StravaApi.STRAVA_URL, stravaUrl);
+        jcrUserNode.saveSession();
     }
 
     private void setMembership(JCRUserNode jcrUserNode) throws RepositoryException {

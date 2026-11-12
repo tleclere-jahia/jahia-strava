@@ -15,8 +15,11 @@
 // The map of a user, created under their node by StravaProfileListener: no contributor drops it
 [foont:stravaProfileMap] > jnt:content
 
+// A button to drop on a page: a guest logs in with Strava, a logged-in user opens their map
+[foont:stravaLogin] > jnt:content, jmix:formContent
+
 // The Strava profile of a user: once stravaUrl is set, the user gets a map of their own under
-// their node, served at /strava/<login>
+// their node, served at /strava/<login>. The Strava login fills it.
 [foont:stravaProfile] mixin
  extends = jnt:user
  - stravaUrl (string) < '^https://www[.]strava[.]com/athletes/[0-9]+/?$'

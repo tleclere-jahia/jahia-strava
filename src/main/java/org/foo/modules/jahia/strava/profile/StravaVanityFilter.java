@@ -81,30 +81,46 @@ public class StravaVanityFilter extends AbstractServletFilter {
             return;
         }
         String login = uri.substring(StravaApi.STRAVA_VANITY_PREFIX.length()).replaceAll("/+$", "");
-        JCRUserNode userNode = login.isEmpty() || login.contains("/") ? null : userManagerService.lookupUser(login);
+        HttpSession session = request.getSession(false);
+        JahiaUser sessionUser = session != null ? (JahiaUser) session.getAttribute(SESSION_USER) : null;
+        boolean guest = sessionUser == null || org.jahia.services.usermanager.JahiaUserManagerService.isGuest(sessionUser);
+
+        // /strava/ is the map of the visitor: the Strava login creates it, then brings them back here
+        if (login.isEmpty()) {
+            if (guest) {
+                redirectToLogin(request, response, uri);
+            } else {
+                response.sendRedirect(request.getContextPath() + StravaApi.STRAVA_VANITY_PREFIX + sessionUser.getName());
+            }
+            return;
+        }
+
+        JCRUserNode userNode = login.contains("/") ? null : userManagerService.lookupUser(login);
         String mapPath = userNode != null ? userNode.getPath() + "/" + StravaApi.STRAVA_MAP_NODE : null;
         if (mapPath == null || !existsInLive(mapPath)) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
-
-        HttpSession session = request.getSession(false);
-        JahiaUser sessionUser = session != null ? (JahiaUser) session.getAttribute(SESSION_USER) : null;
-        if (sessionUser == null || org.jahia.services.usermanager.JahiaUserManagerService.isGuest(sessionUser)) {
-            String connectUrl = oidcConnectUrl(request);
-            if (connectUrl == null) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
-            }
-            Cookie returnCookie = new Cookie(RETURN_COOKIE, request.getContextPath() + uri);
-            returnCookie.setPath("/");
-            returnCookie.setHttpOnly(true);
-            response.addCookie(returnCookie);
-            response.sendRedirect(connectUrl);
+        if (guest) {
+            redirectToLogin(request, response, uri);
             return;
         }
 
         request.getRequestDispatcher("/cms/render/" + Constants.LIVE_WORKSPACE + "/" + language(userNode) + mapPath + ".html").forward(request, response);
+    }
+
+    /** Sends a guest to the Strava login, which brings them back to uri through the return cookie */
+    private void redirectToLogin(HttpServletRequest request, HttpServletResponse response, String uri) throws IOException {
+        String connectUrl = oidcConnectUrl(request);
+        if (connectUrl == null) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+        Cookie returnCookie = new Cookie(RETURN_COOKIE, request.getContextPath() + uri);
+        returnCookie.setPath("/");
+        returnCookie.setHttpOnly(true);
+        response.addCookie(returnCookie);
+        response.sendRedirect(connectUrl);
     }
 
     private static String language(JCRUserNode userNode) {

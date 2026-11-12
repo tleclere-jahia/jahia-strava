@@ -22,5 +22,9 @@
     "elevation": "Elevation",
     "duration": "Duration",
     "viewOnStrava": "View on Strava"
+  },
+  "stravaLogin": {
+    "login": "Log in with Strava",
+    "myMap": "My Strava map"
   }
 }

@@ -22,5 +22,9 @@
     "elevation": "Dénivelé",
     "duration": "Durée",
     "viewOnStrava": "Voir sur Strava"
+  },
+  "stravaLogin": {
+    "login": "Se connecter avec Strava",
+    "myMap": "Ma carte Strava"
   }
 }

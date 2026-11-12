@@ -15,6 +15,8 @@ public class StravaApi {
     /** The mixin that gives a user a Strava profile, with its stravaUrl */
     public static final String STRAVA_PROFILE = "foont:stravaProfile";
     public static final String STRAVA_URL = "stravaUrl";
+    /** stravaUrl is this prefix followed by the athlete id */
+    public static final String STRAVA_ATHLETE_URL = API + "/athletes/";
     /** The map of a user who filled stravaUrl, under their node */
     public static final String STRAVA_MAP_NODE = "strava-map";
     /** The vanity URL of that map: /strava/&lt;login&gt; */

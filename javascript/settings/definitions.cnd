@@ -4,7 +4,7 @@
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
 <mix = 'http://www.jcp.org/jcr/mix/1.0'>
 
-// The node types (foont:stravaActivity, foont:stravaProfileMap) are defined by the
+// The node types (foont:stravaActivity, foont:stravaProfileMap, foont:stravaLogin) are defined by the
 // `jahia-strava` Java module, which also provides the OAuth glue, the
 // synchronization job and the GraphQL subscription. This JavaScript module only
 // contributes React views for them. This file intentionally declares no new

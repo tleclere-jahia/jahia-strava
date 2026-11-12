@@ -71,6 +71,19 @@ public class StravaClient {
         return null;
     }
 
+    /** The athlete who owns the token */
+    public Optional<Athlete> getAthlete(String accessToken) {
+        try {
+            String response = httpClientService.executeGet(StravaApi.API + "/api/v3/athlete", Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
+            if (response != null) {
+                return Optional.ofNullable(objectMapper.readValue(response, Athlete.class));
+            }
+        } catch (JsonProcessingException e) {
+            logger.error("", e);
+        }
+        return Optional.empty();
+    }
+
     public Optional<Activity> getActivity(String accessToken, long id) {
         try {
             String response = httpClientService.executeGet(StravaApi.API + "/api/v3/activities/" + id + "?include_all_efforts=true", Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));

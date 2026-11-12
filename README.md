@@ -4,8 +4,8 @@ Strava integration for Jahia 8.2, split in two artifacts:
 
 | Artifact | Type | Content |
 |---|---|---|
-| `jahia-strava` (root, Maven) | Java OSGi bundle | OAuth glue (token storage, refresh, `strava-users` membership), Strava API client, `syncMe` action, synchronization background job, GraphQL subscription `subscribeToStravaSynchronization`, `foont:stravaActivity`, `foont:stravaActivities`, `foont:stravaProfileMap` node types and `foont:stravaProfile` mixin |
-| `jahia-strava-js` (`javascript/`, Yarn) | [Jahia JavaScript module](https://academy.jahia.com/tutorials-get-started/front-end-developer/introduction) | React server view for `foont:stravaMap` + hydrated island (Leaflet map, marker cluster, GraphQL pagination, WebSocket synchronization status) |
+| `jahia-strava` (root, Maven) | Java OSGi bundle | OAuth glue (token storage, refresh, `strava-users` membership), Strava API client, `syncMe` action, synchronization background job, GraphQL subscription `subscribeToStravaSynchronization`, `foont:stravaActivity`, `foont:stravaActivities`, `foont:stravaProfileMap`, `foont:stravaLogin` node types and `foont:stravaProfile` mixin |
+| `jahia-strava-js` (`javascript/`, Yarn) | [Jahia JavaScript module](https://academy.jahia.com/tutorials-get-started/front-end-developer/introduction) | React server view for `foont:stravaProfileMap` + hydrated island (Leaflet map, marker cluster, GraphQL pagination, WebSocket synchronization status), and the `foont:stravaLogin` button |
 
 The OAuth dance itself is delegated to [jahia-oauth-oidc](https://github.com/Jahia/jahia-oauth-oidc) (`.oidc-connect.do` / `.oidc-callback.do`): this module only keeps the `ConnectorResultProcessor` and login listener that persist the Strava token data on the user node and refresh it.
 
@@ -24,15 +24,18 @@ Browser          jahia-strava-js (React)         jahia-strava (Java)
 - `javascript/src/components/StravaProfileMap/activities.ts`: paginated GraphQL loading of activities
 - `javascript/src/components/StravaProfileMap/sync.ts`: GraphQL WebSocket subscription
 - `javascript/src/components/StravaProfileMap/map.ts`: Leaflet map, polyline decoding, popups
+- `javascript/src/components/StravaLogin/default.server.tsx`: the "Log in with Strava" button, "My Strava map" once logged in
 
 ## Strava profile and `/strava/<login>`
 
-A user adds the `foont:stravaProfile` mixin to their profile and fills `stravaUrl` (`https://www.strava.com/athletes/<id>`). `StravaProfileListener` then creates or updates `foont:stravaMap` `strava-map` under the user node, keeps it for its owner (ACL inheritance broken, `owner` role for the user only). The map carries `jmix:autoPublish`, so LIVE follows each save: once `stravaUrl` is emptied, or the mixin removed, the listener removes the map from the edit workspace, LIVE loses it too, and `/strava/<login>` answers 404.
+The Strava login fills the profile: `StravaConnectorResultProcessor` reads the athlete who owns the token (`GET /api/v3/athlete`), adds the `foont:stravaProfile` mixin to the user and sets `stravaUrl` to `https://www.strava.com/athletes/<id>`. A user who is not `site-privileged` never edits their profile, so no form asks for it. `StravaProfileListener` then creates or updates the `foont:stravaProfileMap` `strava-map` under the user node, keeps it for its owner (ACL inheritance broken, `owner` role for the user only). The map carries `jmix:autoPublish`, so LIVE follows each save: once `stravaUrl` is emptied, or the mixin removed, the listener removes the map from the edit workspace, LIVE loses it too, and `/strava/<login>` answers 404.
 
 `/strava/<login>` serves that map:
 
 - a logged-in visitor gets `/users/.../<login>/strava-map` rendered from LIVE, inside the `foont:stravaProfileMap` page template of `jahia-strava-js`; the ACL refuses it to anyone but its owner;
 - a guest is redirected to the Strava login (`oidc-connect.do`) of the first site where the `OidcConnector` is enabled, with a `strava-return` cookie that brings them back after the login.
+
+`/strava/` is the map of the visitor, the link of the `foont:stravaLogin` button: a guest goes through the Strava login and comes back there, which creates their map on the way, and a logged-in user is redirected to `/strava/<login>`. To drop the button on a page, enable `jahia-strava` and `jahia-strava-js` on that site too.
 
 `/users` belongs to `systemsite`, so both modules must be enabled there, and the connector must return through the cookie. Once both modules are deployed, run through the provisioning API:
 
