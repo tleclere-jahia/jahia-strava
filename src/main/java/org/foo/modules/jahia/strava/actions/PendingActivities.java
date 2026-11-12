@@ -28,10 +28,14 @@ public final class PendingActivities {
     /** The largest page the Strava API returns */
     private static final int PAGE_SIZE = 200;
     private static final long COUNT_CACHE_MILLIS = 5 * 60 * 1000L;
+    /** The window of the Strava rate limit, which counts the requests of the whole application */
+    private static final long REFUSED_BACKOFF_MILLIS = 15 * 60 * 1000L;
     private static final String ACTIVITY_PREFIX = "activity-";
 
     /** user path → [time of the count, count], so that a page view does not call Strava each time */
     private static final Map<String, long[]> counts = new ConcurrentHashMap<>();
+    /** Until when the count asks Strava nothing, once Strava refused a request */
+    private static volatile long refusedUntil = 0;
 
     private PendingActivities() {
         throw new IllegalStateException("Utility class");
@@ -57,6 +61,7 @@ public final class PendingActivities {
         for (int page = 1; ; page++) {
             Optional<List<Activity>> summaries = stravaClient.getActivities(accessToken, after, page, PAGE_SIZE);
             if (!summaries.isPresent()) {
+                refusedUntil = System.currentTimeMillis() + REFUSED_BACKOFF_MILLIS;
                 return Optional.empty();
             }
             for (Activity summary : summaries.get()) {
@@ -71,11 +76,18 @@ public final class PendingActivities {
         }
     }
 
-    /** The number of pending activities, counted again at most every 5 minutes; null when unknown */
+    /**
+     * The number of pending activities, counted again at most every 5 minutes; null when unknown.
+     * Once Strava refused a request, most often with a 429, the count asks Strava nothing for 15
+     * minutes, so that page views do not spend the rate limit that a synchronization needs.
+     */
     public static Integer count(StravaClient stravaClient, JCRNodeWrapper userNode, String accessToken) throws RepositoryException {
         long[] cached = counts.get(userNode.getPath());
         if (cached != null && System.currentTimeMillis() - cached[0] < COUNT_CACHE_MILLIS) {
             return (int) cached[1];
+        }
+        if (System.currentTimeMillis() < refusedUntil) {
+            return null;
         }
         return find(stravaClient, userNode, accessToken).map(List::size).orElse(null);
     }
