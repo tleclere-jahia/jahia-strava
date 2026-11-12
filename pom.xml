@@ -141,23 +141,4 @@
             <url>https://devtools.jahia.com/nexus/content/groups/public</url>
         </repository>
     </repositories>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.jahia.server</groupId>
-                <artifactId>jahia-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>i18n2js</id>
-                        <goals>
-                            <goal>javascript-dictionary</goal>
-                        </goals>
-                        <configuration>
-                            <dictionaryName>jahiastravai18n</dictionaryName>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 </project>
