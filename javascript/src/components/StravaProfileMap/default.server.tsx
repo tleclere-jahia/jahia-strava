@@ -14,14 +14,10 @@ import { useTranslation } from "react-i18next";
 import StravaMapClient from "./StravaMap.client";
 import classes from "./styles.module.css";
 
-interface Props {
-  "jcr:title"?: string;
-}
-
 jahiaComponent(
   {
     componentType: "view",
-    nodeType: "foont:stravaMap",
+    nodeType: "foont:stravaProfileMap",
     name: "default",
     properties: {
       "cache.perUser": "true",
@@ -29,17 +25,16 @@ jahiaComponent(
       "cache.sessionAttributes": "tokenData",
     },
   },
-  ({ "jcr:title": title }: Props, { renderContext }) => {
+  (_props, { renderContext }) => {
     const { t } = useTranslation();
     const user = renderContext.getUser();
 
-    // The view is rendered inside a page provided by the site's template set: contribute the
-    // module's aggregated stylesheet (Leaflet, marker cluster, ribbons) to the document head,
-    // the way the former JSP view did with <template:addResources type="css"/>
+    // The view is rendered inside the foont:stravaProfileMap page template of this module: contribute
+    // the module's aggregated stylesheet (Leaflet, marker cluster, ribbons) to the document head
     return (
       <>
         <AddResources type="css" resources={buildModuleFileUrl("dist/assets/style.css")} />
-        <StravaMapView title={title} t={t} renderContext={renderContext} user={user} />
+        <StravaMapView t={t} renderContext={renderContext} user={user} />
       </>
     );
   },
@@ -49,26 +44,18 @@ jahiaComponent(
  * The actual map component, extracted so that `AddResources` wraps it in the registered view.
  */
 const StravaMapView = ({
-  title,
   t,
   renderContext,
   user,
 }: {
-  title?: string;
   t: TFunction;
   renderContext: RenderContext;
   user: JahiaUser;
 }) => {
-  // Not logged in: propose to connect through the OIDC connector (jahia-oauth-oidc module)
+  // The ACL of the map keeps it for its owner, and /strava/<login> sends a guest to the Strava
+  // login before the map: a guest that still reaches it gets nothing
   if (!renderContext.isLoggedIn()) {
-    const connectUrl = buildNodeUrl(renderContext.getMainResource().getNode(), {
-      extension: ".oidc-connect.do",
-    });
-    return (
-      <a href={connectUrl} title={title}>
-        {title}
-      </a>
-    );
+    return null;
   }
 
   // The map content depends on the user's synchronized activities: flush when they change

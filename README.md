@@ -18,11 +18,35 @@ Browser          jahia-strava-js (React)         jahia-strava (Java)
   │  GET .syncMe.do ─────────────────────────► SyncMeAction → SyncBackgroundJob → Strava API
 ```
 
-- `javascript/src/components/StravaMap/default.server.tsx`: server-rendered view (login link, greeting, cache dependencies, island wiring)
-- `javascript/src/components/StravaMap/StravaMap.client.tsx`: hydrated island (loading/error ribbons, sync link)
-- `javascript/src/components/StravaMap/activities.ts`: paginated GraphQL loading of activities
-- `javascript/src/components/StravaMap/sync.ts`: GraphQL WebSocket subscription
-- `javascript/src/components/StravaMap/map.ts`: Leaflet map, polyline decoding, popups
+- `javascript/src/components/StravaProfileMap/fullpage.server.tsx`: page template of `foont:stravaProfileMap`, which `/users` lacks
+- `javascript/src/components/StravaProfileMap/default.server.tsx`: server-rendered view (greeting, cache dependencies, island wiring)
+- `javascript/src/components/StravaProfileMap/StravaMap.client.tsx`: hydrated island (loading/error ribbons, sync link)
+- `javascript/src/components/StravaProfileMap/activities.ts`: paginated GraphQL loading of activities
+- `javascript/src/components/StravaProfileMap/sync.ts`: GraphQL WebSocket subscription
+- `javascript/src/components/StravaProfileMap/map.ts`: Leaflet map, polyline decoding, popups
+
+## Strava profile and `/strava/<login>`
+
+A user adds the `foont:stravaProfile` mixin to their profile and fills `stravaUrl` (`https://www.strava.com/athletes/<id>`). `StravaProfileListener` then creates or updates `foont:stravaMap` `strava-map` under the user node, keeps it for its owner (ACL inheritance broken, `owner` role for the user only). The map carries `jmix:autoPublish`, so LIVE follows each save: once `stravaUrl` is emptied, or the mixin removed, the listener removes the map from the edit workspace, LIVE loses it too, and `/strava/<login>` answers 404.
+
+`/strava/<login>` serves that map:
+
+- a logged-in visitor gets `/users/.../<login>/strava-map` rendered from LIVE, inside the `foont:stravaProfileMap` page template of `jahia-strava-js`; the ACL refuses it to anyone but its owner;
+- a guest is redirected to the Strava login (`oidc-connect.do`) of the first site where the `OidcConnector` is enabled, with a `strava-return` cookie that brings them back after the login.
+
+`/users` belongs to `systemsite`, so both modules must be enabled there, and the connector must return through the cookie. Once both modules are deployed, run through the provisioning API:
+
+```yaml
+- enable: "jahia-strava"
+  site: "systemsite"
+- enable: "jahia-strava-js"
+  site: "systemsite"
+- editConfiguration: "org.jahia.modules.auth"
+  configIdentifier: "<site key>"
+  properties:
+    OidcConnector.returnMode: "cookie"
+    OidcConnector.returnCookie: "strava-return"
+```
 
 ## Development
 
