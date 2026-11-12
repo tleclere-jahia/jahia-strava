@@ -26,8 +26,4 @@ public class Athlete {
     private List<Club> clubs;
     private List<Gear> bikes;
     private List<Gear> shoes;
-
-    public long getId() {
-        return id;
-    }
 }

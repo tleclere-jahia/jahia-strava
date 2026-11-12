@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 @Component(service = StravaClient.class)
 public class StravaClient {
@@ -71,17 +73,23 @@ public class StravaClient {
         return null;
     }
 
-    /** The athlete who owns the token */
-    public Optional<Athlete> getAthlete(String accessToken) {
+    /**
+     * The id of the athlete who owns the token. Only the id is read: the full Athlete model also
+     * maps their clubs, whose activity types ActivityType does not all know.
+     */
+    public OptionalLong getAthleteId(String accessToken) {
         try {
             String response = httpClientService.executeGet(StravaApi.API + "/api/v3/athlete", Collections.singletonMap(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken));
             if (response != null) {
-                return Optional.ofNullable(objectMapper.readValue(response, Athlete.class));
+                JsonNode id = objectMapper.readTree(response).path("id");
+                if (id.canConvertToLong()) {
+                    return OptionalLong.of(id.asLong());
+                }
             }
         } catch (JsonProcessingException e) {
             logger.error("", e);
         }
-        return Optional.empty();
+        return OptionalLong.empty();
     }
 
     public Optional<Activity> getActivity(String accessToken, long id) {

@@ -2,7 +2,6 @@ package org.foo.modules.jahia.strava.oauth;
 
 import org.apache.commons.lang.StringUtils;
 import org.foo.modules.jahia.strava.StravaApi;
-import org.foo.modules.jahia.strava.client.Athlete;
 import org.foo.modules.jahia.strava.client.StravaClient;
 import org.jahia.api.Constants;
 import org.jahia.api.content.JCRTemplate;
@@ -20,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
 import java.util.Map;
-import java.util.Optional;
+import java.util.OptionalLong;
 
 @Component(service = ConnectorResultProcessor.class, immediate = true)
 public class StravaConnectorResultProcessor implements ConnectorResultProcessor {
@@ -90,12 +89,12 @@ public class StravaConnectorResultProcessor implements ConnectorResultProcessor 
         if (StringUtils.isBlank(accessToken)) {
             return;
         }
-        Optional<Athlete> athlete = stravaClient.getAthlete(accessToken);
-        if (!athlete.isPresent()) {
+        OptionalLong athleteId = stravaClient.getAthleteId(accessToken);
+        if (!athleteId.isPresent()) {
             logger.warn("Cannot read the Strava athlete of {}: stravaUrl stays as it is", jcrUserNode.getName());
             return;
         }
-        String stravaUrl = StravaApi.STRAVA_ATHLETE_URL + athlete.get().getId();
+        String stravaUrl = StravaApi.STRAVA_ATHLETE_URL + athleteId.getAsLong();
         if (!jcrUserNode.isNodeType(StravaApi.STRAVA_PROFILE)) {
             jcrUserNode.addMixin(StravaApi.STRAVA_PROFILE);
         } else if (stravaUrl.equals(jcrUserNode.getPropertyAsString(StravaApi.STRAVA_URL))) {
