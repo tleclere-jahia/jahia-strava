@@ -107,11 +107,11 @@ public class SyncBackgroundJob extends BackgroundJob {
         try {
             JCRNodeWrapper jcrNodeWrapper;
             if (!jcrUserNode.hasNode(StravaApi.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
-                jcrNodeWrapper = jcrUserNode.addNode(StravaApi.MY_STRAVA_PROFILE_ACTIVITES_FOLDER, "jnt:contentFolder");
+                jcrNodeWrapper = jcrUserNode.addNode(StravaApi.MY_STRAVA_PROFILE_ACTIVITES_FOLDER, StravaApi.STRAVA_ACTIVITIES);
             } else {
                 jcrNodeWrapper = jcrUserNode.getNode(StravaApi.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
             }
-            JCRAutoSplitUtils.enableAutoSplitting(jcrNodeWrapper, "date," + StravaApi.STRAVA_ACTIVITY_DATE + ",yyyy;date," + StravaApi.STRAVA_ACTIVITY_DATE + ",MM", "jnt:contentFolder");
+            JCRAutoSplitUtils.enableAutoSplitting(jcrNodeWrapper, "date," + StravaApi.STRAVA_ACTIVITY_DATE + ",yyyy;date," + StravaApi.STRAVA_ACTIVITY_DATE + ",MM", StravaApi.STRAVA_ACTIVITIES);
             jcrNodeWrapper.saveSession();
             return true;
         } catch (RepositoryException e) {

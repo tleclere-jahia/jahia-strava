@@ -10,6 +10,7 @@ public class StravaApi {
     public static final String SITEKEY = null;
     public static final String MY_STRAVA_PROFILE_ACTIVITES_FOLDER = "strava-activities";
     public static final String STRAVA_ACTIVITY = "foont:stravaActivity";
+    public static final String STRAVA_ACTIVITIES = "foont:stravaActivities";
     public static final String STRAVA_ACTIVITY_DATE = "date";
     public static final String STRAVA_ACTIVITY_JSON = "jsonValue";
     public static final String LAST_STRAVA_SYNC = "lastStravaSync";
