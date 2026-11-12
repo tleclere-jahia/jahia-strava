@@ -55,3 +55,12 @@ cd javascript && yarn build          # produces dist/package.tgz
 ```
 
 Install both artifacts through the Jahia UI (Server settings > Modules) or the provisioning API. `jahia-strava-js` declares dependencies on `javascript-modules-engine` and `jahia-strava`, so install it last (or let provisioning resolve the order).
+
+## Versioning and release
+
+Both artifacts carry the same version, and `pom.xml` is the reference. Jahia records the version of `jahia-strava-js` from `javascript/package.json`, so that file follows the pom:
+
+- `mvn release:prepare` rewrites `javascript/package.json` with the release version before the tag, and with the next `-SNAPSHOT` after it, through the `release-prepare` profile (`javascript/sync-version.js`), and commits it beside the pom.
+- After changing the version of the pom by hand, run `mvn -P release-prepare validate` to copy it to `javascript/package.json`.
+
+A new major version also moves the range `jahia-strava=[1,2)` of `module-dependencies` in `javascript/package.json`.

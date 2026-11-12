@@ -141,4 +141,56 @@
             <url>https://devtools.jahia.com/nexus/content/groups/public</url>
         </repository>
     </repositories>
+    <build>
+        <plugins>
+            <plugin>
+                <!-- javascript/package.json follows the version of this pom on each release -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <configuration>
+                    <preparationGoals>-P release-prepare clean verify scm:checkin</preparationGoals>
+                    <completionGoals>-P release-prepare clean install scm:checkin</completionGoals>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>release-prepare</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>sync-package-json-version</id>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>node</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/javascript/sync-version.js</argument>
+                                        <argument>${project.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-scm-plugin</artifactId>
+                        <version>2.1.0</version>
+                        <configuration>
+                            <includes>javascript/package.json</includes>
+                            <message>chore: sync javascript/package.json version to ${project.version}</message>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
