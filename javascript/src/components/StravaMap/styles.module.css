@@ -135,7 +135,8 @@
 
   position: absolute;
   inset: var(--t) calc(-1 * var(--f)) auto auto;
-  padding: 0 10px var(--f) calc(10px + var(--r));
+  /* the ribbon overflows the map by --f on the right: the right padding covers it, plus a margin */
+  padding: 0 calc(var(--f) + 1rem) var(--f) calc(10px + var(--r));
   clip-path: polygon(
     0 0,
     100% 0,
