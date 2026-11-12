@@ -22,6 +22,9 @@ export interface StravaMapClientProps {
 
 type Phase = "loading" | "ready" | "error";
 
+/** How long a synchronization error stays on screen, before the ribbon hides and the page reloads */
+const SYNC_ERROR_DISPLAY_MS = 10_000;
+
 export default function StravaMapClient({
   language,
   gqlUrl,
@@ -33,6 +36,7 @@ export default function StravaMapClient({
   const nbActivitiesRef = useRef<HTMLSpanElement>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
   const mapRef = useRef<StravaMapHandle>(undefined);
 
@@ -48,6 +52,9 @@ export default function StravaMapClient({
     let disposed = false;
     let closeSocket: (() => void) | undefined;
     let map: StravaMapHandle | undefined;
+    let errorShownUntil = 0;
+    let errorTimer: ReturnType<typeof setTimeout> | undefined;
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 
     // Leaflet reads `window` as soon as it loads, so it is loaded here, in the browser only:
     // a static import would run it on the server (GraalVM) when the module starts.
@@ -120,7 +127,25 @@ export default function StravaMapClient({
                 setLoadingMessage(message);
               });
           },
-          onFinished: () => window.location.reload(),
+          onSyncError: (message) => {
+            if (disposed) return;
+            console.warn(`Strava synchronization stopped: ${message}`);
+            setErrorMessage(t("stravaMap.syncError"));
+            setPhase("error");
+            errorShownUntil = Date.now() + SYNC_ERROR_DISPLAY_MS;
+            clearTimeout(errorTimer);
+            errorTimer = setTimeout(() => {
+              setPhase("ready");
+              setErrorMessage(undefined);
+            }, SYNC_ERROR_DISPLAY_MS);
+          },
+          // the job sends FINISHED right after an error: let the error stay readable first
+          onFinished: () => {
+            reloadTimer = setTimeout(
+              () => window.location.reload(),
+              Math.max(0, errorShownUntil - Date.now()),
+            );
+          },
           onError: displayError,
         });
       })
@@ -128,6 +153,8 @@ export default function StravaMapClient({
 
     return () => {
       disposed = true;
+      clearTimeout(errorTimer);
+      clearTimeout(reloadTimer);
       closeSocket?.();
       map?.remove();
       mapRef.current = undefined;
@@ -162,7 +189,7 @@ export default function StravaMapClient({
           className={`${classes.ribbon} ${classes.error}`}
           style={{ display: phase === "error" ? "block" : "none" }}
         >
-          {t("stravaMap.error")}
+          {errorMessage ?? t("stravaMap.error")}
         </div>
       </div>
     </>

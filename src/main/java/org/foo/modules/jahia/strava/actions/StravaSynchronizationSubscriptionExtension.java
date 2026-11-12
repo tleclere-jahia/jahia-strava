@@ -42,7 +42,7 @@ public class StravaSynchronizationSubscriptionExtension {
     @GraphQLDescription("Strava synchronization")
     public static class GqlStravaSynchronization {
         @GraphQLDescription("Status of the synchronization")
-        public enum StravaSynchronizationStatus {STARTED, IN_PROGRESS, FINISHED}
+        public enum StravaSynchronizationStatus {STARTED, IN_PROGRESS, ERROR, FINISHED}
 
         @GraphQLField
         @GraphQLDescription("Synchronization status")

@@ -10,7 +10,8 @@
     "loading": "Loading...",
     "error": "An error occurred",
     "editMode": "The Strava map is only rendered on the live site. Switch to preview or live mode to see it.",
-    "syncActivity": "Synchronizing the activity of {{date}}"
+    "syncActivity": "Synchronizing the activity of {{date}}",
+    "syncError": "Strava refused the request, most likely because of its rate limit. Try again in 15 minutes."
   },
   "activity": {
     "date": "Date",

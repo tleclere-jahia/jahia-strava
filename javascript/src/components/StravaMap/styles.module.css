@@ -101,6 +101,8 @@
 .ribbon {
   display: none;
   z-index: 999;
+  /* a long message, such as a synchronization error, wraps inside the map */
+  max-width: 70%;
   color: white;
   font-size: 1.5rem;
 

@@ -20,6 +20,8 @@ import javax.jcr.query.Query;
 import javax.jcr.query.RowIterator;
 import java.time.LocalDateTime;
 import java.util.Calendar;
+import java.util.List;
+import java.util.Optional;
 
 public class SyncBackgroundJob extends BackgroundJob {
     private static final Logger logger = LoggerFactory.getLogger(SyncBackgroundJob.class);
@@ -79,17 +81,38 @@ public class SyncBackgroundJob extends BackgroundJob {
         }
     }
 
+    /**
+     * Saves the activities of one page, then of the next ones. A request that Strava refuses, most
+     * often with a 429 once its rate limit is reached, stops the synchronization: the next requests
+     * would be refused too. HttpClientService logs the status and returns no response.
+     */
     private static void getMyActivities(StravaClient stravaClient, JCRNodeWrapper userNode, String accessToken, LocalDateTime startDate, int page) {
         StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Get my activities...");
-        stravaClient.getActivities(accessToken, startDate, page).ifPresent(data -> {
-            StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Processing " + data.size() + " activities");
-            logger.debug("{} activities found", data.size());
-            data.forEach(activity -> stravaClient.getActivity(accessToken, activity.getId()).ifPresent(a -> createJCRActivity(userNode, a)));
-            StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, data.size() + " activities found");
-            if (!data.isEmpty()) {
-                getMyActivities(stravaClient, userNode, accessToken, startDate, page + 1);
+        Optional<List<Activity>> activities = stravaClient.getActivities(accessToken, startDate, page);
+        if (!activities.isPresent()) {
+            notifyStravaError("Strava refused the list of activities, page " + page);
+            return;
+        }
+        List<Activity> data = activities.get();
+        StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Processing " + data.size() + " activities");
+        logger.debug("{} activities found", data.size());
+        for (Activity summary : data) {
+            Optional<Activity> activity = stravaClient.getActivity(accessToken, summary.getId());
+            if (!activity.isPresent()) {
+                notifyStravaError("Strava refused the activity " + summary.getId());
+                return;
             }
-        });
+            createJCRActivity(userNode, activity.get());
+        }
+        StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, data.size() + " activities found");
+        if (!data.isEmpty()) {
+            getMyActivities(stravaClient, userNode, accessToken, startDate, page + 1);
+        }
+    }
+
+    private static void notifyStravaError(String message) {
+        logger.warn("Synchronization stopped: {}", message);
+        StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.ERROR, message);
     }
 
     private static JCRNodeWrapper findActivityNode(JCRNodeWrapper rootNode, long activityId) throws RepositoryException {

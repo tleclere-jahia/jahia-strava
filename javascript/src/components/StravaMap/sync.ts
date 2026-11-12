@@ -6,6 +6,8 @@ interface SubscribeOptions {
    * node just synchronized, if any
    */
   onMessage: (message: string, path?: string) => void;
+  /** Called when Strava refused a request and the synchronization stopped */
+  onSyncError: (message: string) => void;
   /** Called when the synchronization finished: the page needs a refresh */
   onFinished: () => void;
   onError: (error: unknown) => void;
@@ -19,6 +21,7 @@ interface SubscribeOptions {
 export const subscribeToSynchronization = ({
   wsUrl,
   onMessage,
+  onSyncError,
   onFinished,
   onError,
 }: SubscribeOptions): (() => void) => {
@@ -46,6 +49,8 @@ export const subscribeToSynchronization = ({
       if (!synchronization) return;
       if (synchronization.status === "FINISHED") {
         onFinished();
+      } else if (synchronization.status === "ERROR") {
+        onSyncError(synchronization.message ?? "");
       } else {
         onMessage(synchronization.message ?? "", synchronization.path ?? undefined);
       }
