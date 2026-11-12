@@ -5,7 +5,7 @@ import "leaflet.fullscreen/dist/Control.FullScreen.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { StravaMapHandle } from "./map";
-import { loadAllActivities } from "./activities";
+import { loadActivity, loadAllActivities } from "./activities";
 import { subscribeToSynchronization } from "./sync";
 import classes from "./styles.module.css";
 
@@ -65,43 +65,60 @@ export default function StravaMapClient({
           created.setView([location.coords.latitude, location.coords.longitude], 11),
         );
 
+        const labels = {
+          date: t("activity.date"),
+          distance: t("activity.distance"),
+          elevation: t("activity.elevation"),
+          duration: t("activity.duration"),
+          viewOnStrava: t("activity.viewOnStrava"),
+        };
+        let total = 0;
+        const showTotal = (count: number) => {
+          total = count;
+          if (nbActivitiesRef.current) nbActivitiesRef.current.innerText = String(count);
+        };
+
         loadAllActivities({
           gqlUrl,
           language,
-          labels: {
-            date: t("activity.date"),
-            distance: t("activity.distance"),
-            elevation: t("activity.elevation"),
-            duration: t("activity.duration"),
-            viewOnStrava: t("activity.viewOnStrava"),
-          },
+          labels,
           map: created,
-          onTotalCount: (count) => {
-            if (nbActivitiesRef.current) nbActivitiesRef.current.innerText = String(count);
-          },
+          onTotalCount: showTotal,
         })
           .then(() => {
             if (!disposed) setPhase("ready");
           })
           .catch(displayError);
 
-        // Live synchronization status through the Jahia GraphQL websocket
+        // Live synchronization status through the Jahia GraphQL websocket: each activity the job
+        // saves joins the map, its clusters and the count as it arrives
         closeSocket = subscribeToSynchronization({
           wsUrl,
-          onMessage: (message, date) => {
-            if (!disposed) {
-              setPhase("loading");
-              setLoadingMessage(
-                date
-                  ? t("stravaMap.syncActivity", {
-                      date: new Intl.DateTimeFormat(language, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      }).format(Date.parse(date)),
-                    })
-                  : message,
-              );
+          onMessage: (message, path) => {
+            if (disposed) return;
+            setPhase("loading");
+            if (!path) {
+              setLoadingMessage(message);
+              return;
             }
+            loadActivity(gqlUrl, path)
+              .then((activity) => {
+                if (disposed) return;
+                const added = created.addActivities([activity], language, labels);
+                if (added) showTotal(total + added);
+                setLoadingMessage(
+                  t("stravaMap.syncActivity", {
+                    date: new Intl.DateTimeFormat(language, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(Date.parse(activity.start_date)),
+                  }),
+                );
+              })
+              .catch((error) => {
+                console.warn(`Cannot load the synchronized activity ${path}`, error);
+                setLoadingMessage(message);
+              });
           },
           onFinished: () => window.location.reload(),
           onError: displayError,

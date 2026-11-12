@@ -50,6 +50,32 @@ query Activities($after: String) {
   }
 }`;
 
+const ACTIVITY_QUERY = `
+query Activity($path: String!) {
+  jcr {
+    nodeByPath(path: $path) {
+      json: property(name: "jsonValue") {
+        value
+      }
+    }
+  }
+}`;
+
+/** Load one activity, such as the one the synchronization just saved */
+export const loadActivity = async (gqlUrl: string, path: string): Promise<Activity> => {
+  const response = await fetch(gqlUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: ACTIVITY_QUERY, variables: { path } }),
+  });
+  const data = await response.json();
+  const json: string | undefined = data.data?.jcr?.nodeByPath?.json?.value;
+  if (!json) {
+    throw new Error(data.errors?.[0]?.message ?? `No activity at ${path}`);
+  }
+  return JSON.parse(json) as Activity;
+};
+
 /**
  * Load every activity of the current user through the GraphQL API, page by page,
  * and add them to the map.

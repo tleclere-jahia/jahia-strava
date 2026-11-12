@@ -35,8 +35,8 @@ public class StravaSynchronizationSubscriptionExtension {
         notifyListeners(status, message, null);
     }
 
-    public static void notifyListeners(GqlStravaSynchronization.StravaSynchronizationStatus status, String message, String date) {
-        listeners.forEach((name, emitter) -> emitter.onNext(new GqlStravaSynchronization(status, message, date)));
+    public static void notifyListeners(GqlStravaSynchronization.StravaSynchronizationStatus status, String message, String path) {
+        listeners.forEach((name, emitter) -> emitter.onNext(new GqlStravaSynchronization(status, message, path)));
     }
 
     @GraphQLDescription("Strava synchronization")
@@ -53,13 +53,13 @@ public class StravaSynchronizationSubscriptionExtension {
         private final String message;
 
         @GraphQLField
-        @GraphQLDescription("Start date of the activity being synchronized, ISO-8601 in UTC, if any")
-        private final String date;
+        @GraphQLDescription("Path of the activity node just synchronized, if any")
+        private final String path;
 
-        public GqlStravaSynchronization(StravaSynchronizationStatus status, String message, String date) {
+        public GqlStravaSynchronization(StravaSynchronizationStatus status, String message, String path) {
             this.status = status;
             this.message = message;
-            this.date = date;
+            this.path = path;
         }
     }
 }

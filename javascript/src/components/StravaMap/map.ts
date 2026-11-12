@@ -61,7 +61,8 @@ export interface PopupLabels {
 
 export interface StravaMapHandle {
   map: L.Map;
-  addActivities: (activities: Activity[], language: string, labels: PopupLabels) => void;
+  /** Add the activities not on the map yet, and return how many were added */
+  addActivities: (activities: Activity[], language: string, labels: PopupLabels) => number;
   fitToActivities: () => void;
   setView: (center: [number, number], zoom: number) => void;
   remove: () => void;
@@ -167,6 +168,9 @@ const buildPopup = (activity: Activity, language: string, labels: PopupLabels): 
  */
 export const createMap = (container: HTMLElement): StravaMapHandle => {
   const features = L.featureGroup();
+  // one cluster group for the whole map, so that activities added later join the same clusters
+  const markers = L.markerClusterGroup({ removeOutsideVisibleBounds: false });
+  const activityIds = new Set<number>();
 
   const map = L.map(container, {
     fullscreenControl: true,
@@ -184,10 +188,15 @@ export const createMap = (container: HTMLElement): StravaMapHandle => {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
+  map.addLayer(markers);
 
   const addActivities = (activities: Activity[], language: string, labels: PopupLabels) => {
-    const markers = L.markerClusterGroup({ removeOutsideVisibleBounds: false });
+    let added = 0;
+    const newMarkers: L.Marker[] = [];
     for (const activity of activities) {
+      if (activityIds.has(activity.id)) continue;
+      activityIds.add(activity.id);
+      added++;
       if (activity.start_latlng?.length === 2) {
         const marker = L.marker(L.latLng(activity.start_latlng[0], activity.start_latlng[1]), {
           title: activity.name,
@@ -216,11 +225,12 @@ export const createMap = (container: HTMLElement): StravaMapHandle => {
           popup.openOn(map);
           map.fitBounds(polyline.getBounds());
         });
-        markers.addLayer(marker);
+        newMarkers.push(marker);
         features.addLayer(marker);
       }
     }
-    map.addLayer(markers);
+    markers.addLayers(newMarkers);
+    return added;
   };
 
   const fitToActivities = () => {
