@@ -1,7 +1,6 @@
 package org.foo.modules.jahia.strava.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.time.LocalDateTime;
 
@@ -14,9 +13,7 @@ public class Segment {
     private float maximum_grade;
     private float elevation_high;
     private float elevation_low;
-    @JsonDeserialize(using = LatLngDeserializer.class)
     private LatLng start_latlng;
-    @JsonDeserialize(using = LatLngDeserializer.class)
     private LatLng end_latlng;
     private int climb_category;
     private String city;

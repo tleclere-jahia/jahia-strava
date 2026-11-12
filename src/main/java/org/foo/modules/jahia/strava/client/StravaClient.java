@@ -39,7 +39,8 @@ public class StravaClient {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new SimpleModule()
                 .addDeserializer(PolylineMap.class, new PolylineMapDeserializer(PolylineMap.class))
-                .addDeserializer(LatLng.class, new LatLngDeserializer(LatLng.class)));
+                .addDeserializer(LatLng.class, new LatLngDeserializer(LatLng.class))
+                .addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer()));
         objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
