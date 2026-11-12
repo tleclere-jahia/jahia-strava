@@ -31,9 +31,9 @@ public class SyncBackgroundJob extends BackgroundJob {
 
     @Override
     public void executeJahiaJob(JobExecutionContext jobExecutionContext) {
-        StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.STARTED, "Start synchronization...");
+        String userPath = jobExecutionContext.getJobDetail().getJobDataMap().getString(BackgroundJob.JOB_USERKEY);
+        StravaSynchronizationSubscriptionExtension.notifyListeners(userPath, StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.STARTED, "Start synchronization...");
         try {
-            String userPath = jobExecutionContext.getJobDetail().getJobDataMap().getString(BackgroundJob.JOB_USERKEY);
             if (userPath == null && logger.isDebugEnabled()) {
                 logger.debug("User not found in jobDataMap: {}", jobExecutionContext.getJobDetail().getJobDataMap());
                 throw new RuntimeException();
@@ -76,7 +76,7 @@ public class SyncBackgroundJob extends BackgroundJob {
             }
             logger.info(">>> END Sync me");
         } finally {
-            StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.FINISHED, "...End synchronization");
+            StravaSynchronizationSubscriptionExtension.notifyListeners(userPath, StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.FINISHED, "...End synchronization");
         }
     }
 
@@ -101,27 +101,27 @@ public class SyncBackgroundJob extends BackgroundJob {
      * HttpClientService logs the status and returns no response.
      */
     private static void getMyActivities(StravaClient stravaClient, JCRNodeWrapper userNode, String accessToken) throws RepositoryException {
-        StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Get my activities...");
+        StravaSynchronizationSubscriptionExtension.notifyListeners(userNode.getPath(), StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Get my activities...");
         Optional<List<Activity>> pending = PendingActivities.find(stravaClient, userNode, accessToken);
         if (!pending.isPresent()) {
-            notifyStravaError("Strava refused the list of activities");
+            notifyStravaError(userNode.getPath(), "Strava refused the list of activities");
             return;
         }
-        StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, pending.get().size() + " activities to synchronize");
+        StravaSynchronizationSubscriptionExtension.notifyListeners(userNode.getPath(), StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, pending.get().size() + " activities to synchronize");
         logger.debug("{} activities to synchronize", pending.get().size());
         for (Activity summary : pending.get()) {
             Optional<Activity> activity = stravaClient.getActivity(accessToken, summary.getId());
             if (!activity.isPresent()) {
-                notifyStravaError("Strava refused the activity " + summary.getId());
+                notifyStravaError(userNode.getPath(), "Strava refused the activity " + summary.getId());
                 return;
             }
             createJCRActivity(userNode, activity.get());
         }
     }
 
-    private static void notifyStravaError(String message) {
+    private static void notifyStravaError(String userPath, String message) {
         logger.warn("Synchronization stopped: {}", message);
-        StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.ERROR, message);
+        StravaSynchronizationSubscriptionExtension.notifyListeners(userPath, StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.ERROR, message);
     }
 
     private static JCRNodeWrapper findActivityNode(JCRNodeWrapper rootNode, long activityId) throws RepositoryException {
@@ -170,7 +170,7 @@ public class SyncBackgroundJob extends BackgroundJob {
                 activityNode.saveSession();
                 // the save moves a new activity to its year/month split folder: read its path again
                 JCRNodeWrapper savedNode = findActivityNode(node, activity.getId());
-                StravaSynchronizationSubscriptionExtension.notifyListeners(StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Sync my activity: " + date, savedNode != null ? savedNode.getPath() : null);
+                StravaSynchronizationSubscriptionExtension.notifyListeners(userNode.getPath(), StravaSynchronizationSubscriptionExtension.GqlStravaSynchronization.StravaSynchronizationStatus.IN_PROGRESS, "Sync my activity: " + date, savedNode != null ? savedNode.getPath() : null);
             }
         } catch (RepositoryException e) {
             logger.error("", e);

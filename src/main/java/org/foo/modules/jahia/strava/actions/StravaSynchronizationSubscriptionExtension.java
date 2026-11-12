@@ -7,36 +7,56 @@ import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
 import org.jahia.modules.graphql.provider.dxm.DXGraphQLProvider;
+import org.jahia.services.content.JCRSessionFactory;
+import org.jahia.services.usermanager.JahiaUser;
 import org.reactivestreams.Publisher;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @GraphQLTypeExtension(DXGraphQLProvider.Subscription.class)
 public class StravaSynchronizationSubscriptionExtension {
-    private static final Map<String, FlowableEmitter<GqlStravaSynchronization>> listeners = new HashMap<>();
+    /** subscription id → the subscriber, with the path of the user who subscribed */
+    private static final Map<String, Listener> listeners = new ConcurrentHashMap<>();
+
+    private static final class Listener {
+        private final String userPath;
+        private final FlowableEmitter<GqlStravaSynchronization> emitter;
+
+        private Listener(String userPath, FlowableEmitter<GqlStravaSynchronization> emitter) {
+            this.userPath = userPath;
+            this.emitter = emitter;
+        }
+    }
 
     private StravaSynchronizationSubscriptionExtension() {
         throw new IllegalStateException("Subscription class are fully static and must not be instantiated");
     }
 
     @GraphQLField
-    @GraphQLDescription("Subscription on Strava synchronization")
+    @GraphQLDescription("Subscription on the Strava synchronization of the current user")
     public static Publisher<GqlStravaSynchronization> subscribeToStravaSynchronization() {
+        // the user of the WebSocket session, read now: the emitter runs on another thread
+        JahiaUser user = JCRSessionFactory.getInstance().getCurrentUser();
+        String userPath = user != null ? user.getLocalPath() : null;
         return Flowable.create(obs -> {
             String name = UUID.randomUUID().toString();
-            listeners.put(name, obs);
+            listeners.put(name, new Listener(userPath, obs));
             obs.setCancellable(() -> listeners.remove(name));
         }, BackpressureStrategy.BUFFER);
     }
 
-    public static void notifyListeners(GqlStravaSynchronization.StravaSynchronizationStatus status, String message) {
-        notifyListeners(status, message, null);
+    public static void notifyListeners(String userPath, GqlStravaSynchronization.StravaSynchronizationStatus status, String message) {
+        notifyListeners(userPath, status, message, null);
     }
 
-    public static void notifyListeners(GqlStravaSynchronization.StravaSynchronizationStatus status, String message, String path) {
-        listeners.forEach((name, emitter) -> emitter.onNext(new GqlStravaSynchronization(status, message, path)));
+    /** Notifies the subscriptions of the user whose activities are synchronized, and no other */
+    public static void notifyListeners(String userPath, GqlStravaSynchronization.StravaSynchronizationStatus status, String message, String path) {
+        GqlStravaSynchronization synchronization = new GqlStravaSynchronization(status, message, path);
+        listeners.values().stream()
+                .filter(listener -> userPath != null && userPath.equals(listener.userPath))
+                .forEach(listener -> listener.emitter.onNext(synchronization));
     }
 
     @GraphQLDescription("Strava synchronization")
