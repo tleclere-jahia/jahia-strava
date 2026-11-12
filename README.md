@@ -4,7 +4,7 @@ Strava integration for Jahia 8.2, split in two artifacts:
 
 | Artifact | Type | Content |
 |---|---|---|
-| `jahia-strava` (root, Maven) | Java OSGi bundle | OAuth glue (token storage, refresh, `strava-users` membership), Strava API client, `syncMe` action, synchronization background job, GraphQL subscription `subscribeToStravaSynchronization`, `foont:stravaActivity` / `foont:stravaMap` node types |
+| `jahia-strava` (root, Maven) | Java OSGi bundle | OAuth glue (token storage, refresh, `strava-users` membership), Strava API client, `syncMe` action, synchronization background job, GraphQL subscription `subscribeToStravaSynchronization`, `foont:stravaActivity`, `foont:stravaActivities`, `foont:stravaProfileMap` node types and `foont:stravaProfile` mixin |
 | `jahia-strava-js` (`javascript/`, Yarn) | [Jahia JavaScript module](https://academy.jahia.com/tutorials-get-started/front-end-developer/introduction) | React server view for `foont:stravaMap` + hydrated island (Leaflet map, marker cluster, GraphQL pagination, WebSocket synchronization status) |
 
 The OAuth dance itself is delegated to [jahia-oauth-oidc](https://github.com/Jahia/jahia-oauth-oidc) (`.oidc-connect.do` / `.oidc-callback.do`): this module only keeps the `ConnectorResultProcessor` and login listener that persist the Strava token data on the user node and refresh it.

@@ -12,10 +12,6 @@
 [foont:stravaActivities] > jnt:contentFolder
  + * (foont:stravaActivity)
 
-// No longer used: the map of a user is a foont:stravaProfileMap. Kept as deployed, since Jahia
-// refuses to remove a supertype from a deployed definition
-[foont:stravaMap] > jnt:content, mix:title, jmix:structuredContent
-
 // The map of a user, created under their node by StravaProfileListener: no contributor drops it
 [foont:stravaProfileMap] > jnt:content
 
