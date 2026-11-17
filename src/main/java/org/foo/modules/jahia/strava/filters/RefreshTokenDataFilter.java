@@ -5,6 +5,7 @@ import org.jahia.modules.jahiaauth.service.ConnectorConfig;
 import org.jahia.modules.jahiaauth.service.SettingsService;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthConstants;
 import org.jahia.modules.jahiaoauth.service.JahiaOAuthService;
+import org.jahia.services.content.decorator.JCRSiteNode;
 import org.jahia.services.render.RenderContext;
 import org.jahia.services.render.Resource;
 import org.jahia.services.render.filter.AbstractFilter;
@@ -14,6 +15,7 @@ import org.jahiacommunity.modules.oauth.oidc.OidcConnector;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+import javax.servlet.http.HttpSession;
 import java.util.Map;
 
 @Component(service = RenderFilter.class)
@@ -32,13 +34,19 @@ public class RefreshTokenDataFilter extends AbstractFilter {
 
     @Override
     public String prepare(RenderContext renderContext, Resource resource, RenderChain chain) throws Exception {
-        ConnectorConfig connectorConfig = settingsService.getConnectorConfig(renderContext.getSite().getSiteKey(), OidcConnector.KEY);
+        // a page outside a site, such as the map under /users in EDIT, has no site to read the connector from
+        JCRSiteNode site = renderContext.getSite();
+        HttpSession session = renderContext.getRequest().getSession(false);
+        if (site == null || session == null) {
+            return null;
+        }
+        ConnectorConfig connectorConfig = settingsService.getConnectorConfig(site.getSiteKey(), OidcConnector.KEY);
         if (connectorConfig == null) {
             return null;
         }
-        Map<String, Object> tokenData = (Map<String, Object>) renderContext.getRequest().getSession(false).getAttribute(JahiaOAuthConstants.TOKEN_DATA);
+        Map<String, Object> tokenData = (Map<String, Object>) session.getAttribute(JahiaOAuthConstants.TOKEN_DATA);
         if (tokenData != null && (((int) tokenData.get(StravaClient.TOKEN_EXPIRES_AT) - (System.currentTimeMillis() / 1000)) <= StravaClient.TOKEN_MIN_LIFE_IN_SECONDS)) {
-            renderContext.getRequest().getSession(false).setAttribute(JahiaOAuthConstants.TOKEN_DATA,
+            session.setAttribute(JahiaOAuthConstants.TOKEN_DATA,
                     StravaClient.addExpireAtInTokenData(jahiaOAuthService.refreshAccessToken(connectorConfig, (String) tokenData.get(JahiaOAuthConstants.REFRESH_TOKEN))));
         }
         return null;
