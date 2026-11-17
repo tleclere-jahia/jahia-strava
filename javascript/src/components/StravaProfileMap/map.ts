@@ -222,8 +222,9 @@ export const createMap = (container: HTMLElement): StravaMapHandle => {
             maxWidth: 300,
           }) as L.Popup & { polyline?: L.Polyline };
           popup.polyline = polyline;
+          // fit first, at once: the popup then opens on the final view, which autoPan moves to show it whole
+          map.fitBounds(polyline.getBounds(), { animate: false });
           popup.openOn(map);
-          map.fitBounds(polyline.getBounds());
         });
         newMarkers.push(marker);
         features.addLayer(marker);
