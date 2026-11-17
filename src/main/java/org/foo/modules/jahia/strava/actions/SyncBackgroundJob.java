@@ -58,6 +58,7 @@ public class SyncBackgroundJob extends BackgroundJob {
                         return false;
                     }
                     JCRNodeWrapper userNode = session.getNode(userPath);
+                    resetForeignActivitiesFolder(userNode);
                     getMyActivities(stravaClient, userNode, accessToken);
                     PendingActivities.forget(userNode.getPath());
 
@@ -137,6 +138,28 @@ public class SyncBackgroundJob extends BackgroundJob {
         }
         logger.debug("Create activity {}", activityId);
         return rootNode.addNode("activity-" + activityId, StravaApi.STRAVA_ACTIVITY);
+    }
+
+    /**
+     * Removes an activities folder of another type than foont:stravaActivities, such as the
+     * jnt:contentFolder of an older version or of an import: it cannot hold a foont:stravaActivity.
+     * Its activities are a copy of Strava's, so the next steps load them all again, which the
+     * removal of LAST_STRAVA_SYNC asks for.
+     */
+    private static void resetForeignActivitiesFolder(JCRNodeWrapper userNode) throws RepositoryException {
+        if (!userNode.hasNode(StravaApi.MY_STRAVA_PROFILE_ACTIVITES_FOLDER)) {
+            return;
+        }
+        JCRNodeWrapper folder = userNode.getNode(StravaApi.MY_STRAVA_PROFILE_ACTIVITES_FOLDER);
+        if (folder.isNodeType(StravaApi.STRAVA_ACTIVITIES)) {
+            return;
+        }
+        logger.warn("Replace the activities folder {} of type {}, which cannot hold activities", folder.getPath(), folder.getPrimaryNodeTypeName());
+        folder.remove();
+        if (userNode.hasProperty(StravaApi.LAST_STRAVA_SYNC)) {
+            userNode.getProperty(StravaApi.LAST_STRAVA_SYNC).remove();
+        }
+        userNode.saveSession();
     }
 
     public static boolean checkMyStravaProfileActivitiesFolder(JCRNodeWrapper jcrUserNode) {
